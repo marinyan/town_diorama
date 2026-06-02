@@ -2,7 +2,7 @@ import { ElevationGrid } from './elevationTypes';
 
 const metersPerDegreeLat = 111_320;
 const metersPerUnit = 8;
-const verticalUnitsPerMeter = 0.16;
+export const verticalUnitsPerMeter = 0.16;
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));

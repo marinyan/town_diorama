@@ -1,4 +1,5 @@
 import { Vector3 } from 'three';
+import { ElevationGrid } from './map/elevationTypes';
 import { createRandom } from './random';
 
 export type BuildingData = {
@@ -41,6 +42,7 @@ export type CityLayout = {
   roads?: RoadData[];
   doors: Vector3[];
   source?: 'procedural' | 'osm';
+  elevationGrid?: ElevationGrid;
 };
 
 const roadXs = [-27, -18, -9, 0, 9, 18, 27];
