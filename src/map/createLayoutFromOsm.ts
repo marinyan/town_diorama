@@ -255,7 +255,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
         footprint,
         color: random.pick(['#687170', '#746f68', '#606971', '#76786f', '#5d6764']),
         roofColor: random.pick(['#3f4648', '#46413f', '#38424a', '#4a4a42']),
-        roofStyle: h <= 4.9 && random.chance(0.76) ? 'gable' : 'flat',
+        roofStyle: 'flat',
         roofAxis: w >= d ? 'x' : 'z',
         signSides: h > 4.4 && random.chance(0.16) ? [random.pick(['north', 'south', 'east', 'west'])] : [],
         hasStairs: random.chance(0.28),
