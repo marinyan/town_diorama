@@ -16,6 +16,9 @@ const query = `
   way["building"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
   relation["building"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
   way["highway"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+  way["waterway"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+  way["natural"="water"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+  way["water"](${bbox.south},${bbox.west},${bbox.north},${bbox.east});
 );
 out body;
 >;

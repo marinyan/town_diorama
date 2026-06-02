@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { BuildingData, CityLayout, CrowdPath, RoadData } from '../cityData';
+import { BuildingData, CityLayout, CrowdPath, RoadData, WaterData } from '../cityData';
 import { createRandom } from '../random';
 import { sampleElevationUnits } from './elevationSampler';
 import { ElevationGrid } from './elevationTypes';
@@ -113,6 +113,22 @@ function roadKind(tags: Record<string, string> | undefined): RoadData['kind'] {
   return 'side';
 }
 
+function waterKind(tags: Record<string, string> | undefined): WaterData['kind'] {
+  if (tags?.waterway === 'canal' || tags?.water === 'canal') return 'canal';
+  if (tags?.waterway === 'stream') return 'stream';
+  if (tags?.natural === 'water') return 'basin';
+  return 'river';
+}
+
+function waterWidth(tags: Record<string, string> | undefined) {
+  const width = Number(tags?.width?.replace(/[^\d.]/g, ''));
+  if (Number.isFinite(width) && width > 0) return Math.min(5, Math.max(0.55, width / 8));
+  if (tags?.waterway === 'stream') return 0.55;
+  if (tags?.waterway === 'canal') return 1.15;
+  if (tags?.natural === 'water') return 1.8;
+  return 2.2;
+}
+
 function parseLayer(tags: Record<string, string> | undefined) {
   const parsed = Number(tags?.layer ?? 0);
   return Number.isFinite(parsed) ? Math.max(-2, Math.min(3, parsed)) : 0;
@@ -201,6 +217,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
   const ways = payload.elements.filter(isWay);
   const buildings: BuildingData[] = [];
   const roads: RoadData[] = [];
+  const waters: WaterData[] = [];
   const paths: CrowdPath[] = [];
   const pathCandidates: PathCandidate[] = [];
   const doors: Vector3[] = [];
@@ -271,6 +288,24 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
         });
       }
     }
+
+    if ((way.tags?.waterway || way.tags?.natural === 'water' || way.tags?.water) && points2.length >= 2) {
+      const kind = waterKind(way.tags);
+      const width = waterWidth(way.tags);
+      const waterPoints = points2.map((point) => {
+        const terrainY = sampleElevationUnits(elevationGrid, point.x, point.y);
+        return new Vector3(point.x, terrainY + 0.012, point.y);
+      });
+      if (!waterPoints.some(isInsideField) && !waterPoints.some((point, index) => index > 0 && isSegmentNearField(waterPoints[index - 1], point))) {
+        continue;
+      }
+      waters.push({
+        id: `osm-water-${way.id}`,
+        points: waterPoints,
+        width,
+        kind,
+      });
+    }
   }
 
   // Use more OSM roads as movement paths, but bias toward routes a person
@@ -284,5 +319,5 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
     throw new Error('OSM payload did not contain usable road paths');
   }
 
-  return { buildings, paths, roads, doors, source: 'osm', elevationGrid };
+  return { buildings, paths, roads, waters, doors, source: 'osm', elevationGrid };
 }

@@ -137,12 +137,54 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
       }),
     [ambience.wetRoadReflection],
   );
+  const water = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        color: '#1b4451',
+        emissive: '#0b2430',
+        emissiveIntensity: ambience.timePreset === 'night' || ambience.timePreset === 'lateNight' ? 0.18 : 0.08,
+        roughness: 0.34,
+        metalness: 0.18 + ambience.wetRoadReflection * 0.18,
+        transparent: true,
+        opacity: 0.86,
+      }),
+    [ambience.timePreset, ambience.wetRoadReflection],
+  );
+  const riverWall = useMemo(() => new MeshStandardMaterial({ color: '#525a58', roughness: 0.7 }), []);
   const isOsm = layout.source === 'osm' && layout.roads && layout.roads.length > 0;
   const withinField = (x: number, z: number) => Math.abs(x) <= 36 && Math.abs(z) <= 31;
 
   return (
     <group>
       <TerrainSurface grid={layout.elevationGrid} snowCover={ambience.snowCover} />
+
+      {layout.waters?.flatMap((river) =>
+        river.points.slice(0, -1).map((start, index) => {
+          const end = river.points[index + 1];
+          const dx = end.x - start.x;
+          const dz = end.z - start.z;
+          const length = Math.hypot(dx, dz);
+          if (length < 0.05) return null;
+          if (!withinField(start.x, start.z) && !withinField(end.x, end.z)) return null;
+          const angle = Math.atan2(dx, dz);
+          const y = (start.y + end.y) / 2;
+          const width = river.width;
+          const bankHeight = 0.16;
+          return (
+            <group key={`${river.id}-${index}`} position={[(start.x + end.x) / 2, y, (start.z + end.z) / 2]} rotation={[0, angle, 0]}>
+              <mesh receiveShadow material={water}>
+                <boxGeometry args={[width, 0.035, length + width * 0.28]} />
+              </mesh>
+              <mesh position={[-width / 2 - 0.08, bankHeight / 2, 0]} receiveShadow material={riverWall}>
+                <boxGeometry args={[0.16, bankHeight, length + width * 0.18]} />
+              </mesh>
+              <mesh position={[width / 2 + 0.08, bankHeight / 2, 0]} receiveShadow material={riverWall}>
+                <boxGeometry args={[0.16, bankHeight, length + width * 0.18]} />
+              </mesh>
+            </group>
+          );
+        }),
+      )}
 
       {isOsm
         ? layout.roads?.flatMap((road) =>

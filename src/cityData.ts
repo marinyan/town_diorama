@@ -36,10 +36,18 @@ export type RoadData = {
   hasSteps?: boolean;
 };
 
+export type WaterData = {
+  id: string;
+  points: Vector3[];
+  width: number;
+  kind: 'river' | 'canal' | 'stream' | 'basin';
+};
+
 export type CityLayout = {
   buildings: BuildingData[];
   paths: CrowdPath[];
   roads?: RoadData[];
+  waters?: WaterData[];
   doors: Vector3[];
   source?: 'procedural' | 'osm';
   elevationGrid?: ElevationGrid;
