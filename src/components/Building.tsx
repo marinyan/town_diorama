@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { DoubleSide, ExtrudeGeometry, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
+import { DoubleSide, ExtrudeGeometry, InstancedBufferAttribute, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
@@ -129,34 +129,53 @@ export function Building({ building, ambience }: BuildingProps) {
 
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
-  const windowGeometry = useMemo(() => new PlaneGeometry(1, 1), []);
+  const windowGeometry = useMemo(() => {
+    const geometry = new PlaneGeometry(1, 1);
+    geometry.setAttribute('instanceAlpha', new InstancedBufferAttribute(new Float32Array(windowSlots.length), 1));
+    return geometry;
+  }, [windowSlots.length]);
   const windowMaterial = useMemo(
-    () =>
-      new MeshBasicMaterial({
+    () => {
+      const material = new MeshBasicMaterial({
         color: '#ffe2a6',
         opacity: 0.9,
         transparent: true,
         depthWrite: false,
         side: DoubleSide,
-      }),
+      });
+      material.onBeforeCompile = (shader) => {
+        shader.vertexShader = [
+          'attribute float instanceAlpha;',
+          'varying float vInstanceAlpha;',
+          shader.vertexShader.replace('#include <begin_vertex>', 'vInstanceAlpha = instanceAlpha;\n#include <begin_vertex>'),
+        ].join('\n');
+        shader.fragmentShader = [
+          'varying float vInstanceAlpha;',
+          shader.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a *= vInstanceAlpha;\n#include <alphatest_fragment>'),
+        ].join('\n');
+      };
+      return material;
+    },
     [],
   );
 
   useLayoutEffect(() => {
     const mesh = windowRef.current;
     if (!mesh) return;
+    const alphaAttribute = windowGeometry.getAttribute('instanceAlpha') as InstancedBufferAttribute;
     const activeProbability = Math.max(0.04, Math.min(0.78, ambience.windowLightProbability));
     windowSlots.forEach((window, index) => {
       const glow = smoothstep(window.threshold - 0.12, window.threshold + 0.08, activeProbability);
-      const visibleScale = Math.max(0.001, glow);
-      dummy.position.set(window.x, glow > 0.01 ? window.y : -80, window.z);
+      dummy.position.set(window.x, window.y, window.z);
       dummy.rotation.set(0, window.ry, 0);
-      dummy.scale.set(window.sx * visibleScale, window.sy * visibleScale, 1);
+      dummy.scale.set(window.sx, window.sy, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
+      alphaAttribute.setX(index, glow);
     });
     mesh.instanceMatrix.needsUpdate = true;
-  }, [ambience.windowLightProbability, dummy, windowSlots]);
+    alphaAttribute.needsUpdate = true;
+  }, [ambience.windowLightProbability, dummy, windowGeometry, windowSlots]);
 
   return (
     <group position={[x, y, z]}>
