@@ -44,6 +44,7 @@ export default function App() {
   const [orbitPaused, setOrbitPaused] = useState(false);
   const [crowdVisible, setCrowdVisible] = useState(true);
   const [rainEnabled, setRainEnabled] = useState(true);
+  const [compassAngle, setCompassAngle] = useState(0.76);
   const [transitionSpeed, setTransitionSpeed] = useState<AmbienceTransitionSpeed>('slow');
   const weatherSettingRef = useRef(weatherSetting);
 
@@ -179,6 +180,7 @@ export default function App() {
             ambience={displayAmbience}
             orbitPaused={orbitPaused}
             crowdVisible={crowdVisible}
+            onCompassAngleChange={setCompassAngle}
             rainVisible={
               rainEnabled &&
               (mockState.weather === 'rain' ||
@@ -198,6 +200,7 @@ export default function App() {
         orbitPaused={orbitPaused}
         crowdVisible={crowdVisible}
         rainEnabled={rainEnabled}
+        compassAngle={compassAngle}
         onToggleOrbit={() => setOrbitPaused((value) => !value)}
         onTimeChange={setTime}
         onWeatherChange={setWeather}

@@ -71,6 +71,55 @@ select {
   font-size: 12px;
 }
 
+.panel-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.classic-compass {
+  --compass-angle: 0rad;
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+}
+
+.classic-compass::before {
+  content: "";
+  position: absolute;
+  inset: 6px 16px;
+  background: linear-gradient(to bottom, #f06a65 0 50%, #5ba8e8 50% 100%);
+  border-radius: 999px;
+  transform: rotate(calc(-1 * var(--compass-angle)));
+  transform-origin: 50% 50%;
+  transition: transform 180ms linear;
+}
+
+.compass-dot {
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.compass-n {
+  top: 5px;
+  background: #ff7a72;
+}
+
+.compass-s {
+  bottom: 5px;
+  background: #6bbcff;
+}
+
 .control-grid {
   display: grid;
   gap: 8px;

@@ -16,15 +16,21 @@ type DioramaSceneProps = {
   orbitPaused: boolean;
   crowdVisible: boolean;
   rainVisible: boolean;
+  onCompassAngleChange?: (angle: number) => void;
 };
 
-function CameraRig({ paused }: { paused: boolean }) {
+function CameraRig({ onCompassAngleChange, paused }: { onCompassAngleChange?: (angle: number) => void; paused: boolean }) {
   const { camera } = useThree();
   const angle = useRef(0.76);
+  const lastReportedAngle = useRef(-1);
   const target = useMemo(() => new Vector3(0, 1.8, 0), []);
 
   useFrame((_, delta) => {
     if (!paused) angle.current += delta * 0.035;
+    if (onCompassAngleChange && Math.abs(angle.current - lastReportedAngle.current) > 0.01) {
+      lastReportedAngle.current = angle.current;
+      onCompassAngleChange(angle.current);
+    }
     const radius = 52;
     camera.position.set(Math.cos(angle.current) * radius, 44, Math.sin(angle.current) * radius);
     camera.lookAt(target);
@@ -60,7 +66,7 @@ function LightningFlash({ active }: { active: boolean }) {
   return <pointLight ref={lightRef} position={[-18, 26, 10]} color="#dbe8ff" intensity={0} distance={90} />;
 }
 
-export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible }: DioramaSceneProps) {
+export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible, onCompassAngleChange }: DioramaSceneProps) {
   const fallbackLayout = useMemo(() => createCityLayout(1984), []);
   const [layout, setLayout] = useState<CityLayout>(fallbackLayout);
   const sceneRef = useRef<Group>(null);
@@ -104,7 +110,7 @@ export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible 
       <fog attach="fog" args={fogArgs as [string, number, number]} />
       <group ref={sceneRef}>
         <OrthographicCamera makeDefault zoom={25} near={0.1} far={220} position={[40, 38, 40]} />
-        <CameraRig paused={orbitPaused} />
+        <CameraRig paused={orbitPaused} onCompassAngleChange={onCompassAngleChange} />
         <hemisphereLight args={[ambience.skyColor, '#263038', 1.05]} />
         <directionalLight
           castShadow

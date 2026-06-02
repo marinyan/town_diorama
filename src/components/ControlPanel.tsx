@@ -1,3 +1,4 @@
+import { CSSProperties } from 'react';
 import { Ambience, MockAmbienceState, TimePreset, WeatherMode } from '../ambience';
 
 type TimeMode = TimePreset | 'live';
@@ -12,6 +13,7 @@ type ControlPanelProps = {
   orbitPaused: boolean;
   crowdVisible: boolean;
   rainEnabled: boolean;
+  compassAngle: number;
   onToggleOrbit: () => void;
   onTimeChange: (time: TimeMode) => void;
   onWeatherChange: (weather: WeatherSetting) => void;
@@ -48,6 +50,7 @@ export function ControlPanel({
   orbitPaused,
   crowdVisible,
   rainEnabled,
+  compassAngle,
   onToggleOrbit,
   onTimeChange,
   onWeatherChange,
@@ -65,7 +68,13 @@ export function ControlPanel({
             density {ambience.pedestrianDensity.toFixed(2)}
           </p>
         </div>
-        <div className="temp-pill">{mockState.temperatureC}C</div>
+        <div className="panel-status">
+          <div className="classic-compass" aria-label="Compass" style={{ '--compass-angle': `${compassAngle}rad` } as CSSProperties}>
+            <span className="compass-dot compass-n" />
+            <span className="compass-dot compass-s" />
+          </div>
+          <div className="temp-pill">{mockState.temperatureC}C</div>
+        </div>
       </div>
 
       <div className="control-grid">
