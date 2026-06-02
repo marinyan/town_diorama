@@ -60,8 +60,8 @@ export function ControlPanel({
         <div>
           <h1 className="panel-title">Just Watching / {mockState.location}</h1>
           <p className="panel-meta">
-            {mockState.localTime} / {mockState.weather} / {mockState.precipitationMm.toFixed(2)}mm /{' '}
-            snow {mockState.snowfallCm.toFixed(2)}cm / depth {mockState.snowDepthCm.toFixed(1)}cm / {mockState.windSpeedKmh.toFixed(1)}km/h /
+            {mockState.localTime} / {mockState.weather} / rain {mockState.precipitationMm.toFixed(2)}mm /{' '}
+            snow {mockState.snowfallCm.toFixed(2)}cm / depth {mockState.snowDepthCm.toFixed(1)}cm / wind {mockState.windSpeedKmh.toFixed(1)}km/h /
             density {ambience.pedestrianDensity.toFixed(2)}
           </p>
         </div>
