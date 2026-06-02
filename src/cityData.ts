@@ -9,6 +9,8 @@ export type BuildingData = {
   footprint?: Array<[number, number]>;
   color: string;
   roofColor: string;
+  roofStyle?: 'flat' | 'gable';
+  roofAxis?: 'x' | 'z';
   signSides: Array<'north' | 'south' | 'east' | 'west'>;
   hasStairs: boolean;
   windowSeed: number;
@@ -98,14 +100,16 @@ export function createCityLayout(seed = 1984): CityLayout {
       const palette = ['#6f7372', '#7b746d', '#5f6770', '#807b72', '#68736e'];
       const roofPalette = ['#3f4648', '#46413f', '#38424a', '#4a4a42'];
       const signSides: BuildingData['signSides'] = [];
-      if (random.chance(0.68)) signSides.push(random.pick(['north', 'south']));
-      if (random.chance(0.38)) signSides.push(random.pick(['east', 'west']));
+      if (height > 4.4 && random.chance(0.22)) signSides.push(random.pick(['north', 'south']));
+      if (height > 5.2 && random.chance(0.12)) signSides.push(random.pick(['east', 'west']));
       buildings.push({
         id: `building-${id++}`,
         position: [x + random.range(-0.7, 0.7), height / 2, z + random.range(-0.5, 0.5)],
         size: [width, height, depth],
         color: random.pick(palette),
         roofColor: random.pick(roofPalette),
+        roofStyle: height <= 4.9 && random.chance(0.68) ? 'gable' : 'flat',
+        roofAxis: width >= depth ? 'x' : 'z',
         signSides,
         hasStairs: random.chance(0.5),
         windowSeed: random.int(10, 9000),

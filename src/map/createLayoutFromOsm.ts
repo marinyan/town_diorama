@@ -211,8 +211,9 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
   payload.elements.filter(isNode).forEach((node) => nodes.set(node.id, node));
   const bbox = payload.bbox;
   const center = bbox
-    ? { lat: (bbox.south + bbox.north) / 2, lon: (bbox.west + bbox.east) / 2 }
+    ? payload.center ?? { lat: (bbox.south + bbox.north) / 2, lon: (bbox.west + bbox.east) / 2 }
     : { lat: 35.693, lon: 139.7025 };
+  const metersPerUnit = payload.metersPerUnit ?? 8;
 
   const ways = payload.elements.filter(isWay);
   const buildings: BuildingData[] = [];
@@ -226,7 +227,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
     const points2 = way.nodes
       .map((id) => nodes.get(id))
       .filter((node): node is OsmNode => Boolean(node))
-      .map((node) => projectLonLat(node.lon, node.lat, center));
+      .map((node) => projectLonLat(node.lon, node.lat, center, metersPerUnit));
 
     if (way.tags?.building && points2.length >= 3) {
       const xs = points2.map((point) => point.x);
@@ -253,7 +254,9 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
         footprint,
         color: random.pick(['#687170', '#746f68', '#606971', '#76786f', '#5d6764']),
         roofColor: random.pick(['#3f4648', '#46413f', '#38424a', '#4a4a42']),
-        signSides: random.chance(0.42) ? [random.pick(['north', 'south', 'east', 'west'])] : [],
+        roofStyle: h <= 4.9 && random.chance(0.76) ? 'gable' : 'flat',
+        roofAxis: w >= d ? 'x' : 'z',
+        signSides: h > 4.4 && random.chance(0.16) ? [random.pick(['north', 'south', 'east', 'west'])] : [],
         hasStairs: random.chance(0.28),
         windowSeed: random.int(10, 9000),
       });

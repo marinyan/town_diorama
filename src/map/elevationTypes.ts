@@ -12,6 +12,7 @@ export type ElevationGrid = {
     lat: number;
     lon: number;
   };
+  metersPerUnit?: number;
   rows: number;
   columns: number;
   baseMeters: number;

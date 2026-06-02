@@ -2,13 +2,20 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const bbox = {
-  south: 35.6206,
-  west: 139.7176,
-  north: 35.6268,
-  east: 139.7238,
+  south: 35.6978,
+  west: 139.7312,
+  north: 35.7062,
+  east: 139.7468,
 };
 
-const outputPath = resolve('public/data/gotanda-toc-osm.json');
+const center = {
+  lat: 35.7029,
+  lon: 139.7366,
+};
+
+const metersPerUnit = 22;
+
+const outputPath = resolve('public/data/kagurazaka-osm.json');
 
 const query = `
 [out:json][timeout:30];
@@ -47,6 +54,8 @@ await writeFile(
       fetchedAt: new Date().toISOString(),
       source: 'OpenStreetMap via Overpass API',
       bbox,
+      center,
+      metersPerUnit,
       ...data,
     },
     null,

@@ -1,7 +1,6 @@
 import { ElevationGrid } from './elevationTypes';
 
 const metersPerDegreeLat = 111_320;
-const metersPerUnit = 8;
 export const verticalUnitsPerMeter = 0.16;
 
 function clamp(value: number, min: number, max: number) {
@@ -27,6 +26,7 @@ function sampleGrid(grid: ElevationGrid, lat: number, lon: number) {
 
 export function sampleElevationUnits(grid: ElevationGrid | undefined, x: number, z: number) {
   if (!grid) return 0;
+  const metersPerUnit = grid.metersPerUnit ?? 8;
   const metersPerDegreeLon = Math.cos((grid.center.lat * Math.PI) / 180) * metersPerDegreeLat;
   const lon = grid.center.lon + (x * metersPerUnit) / metersPerDegreeLon;
   const lat = grid.center.lat - (z * metersPerUnit) / metersPerDegreeLat;

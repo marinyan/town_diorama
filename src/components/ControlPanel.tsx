@@ -31,7 +31,7 @@ const timeOptions: Array<{ value: TimeMode; label: string }> = [
 ];
 
 const weatherOptions: Array<{ value: WeatherSetting; label: string }> = [
-  { value: 'live', label: 'Live Gotanda' },
+  { value: 'live', label: 'Live Kagurazaka' },
   { value: 'clear', label: 'Clear' },
   { value: 'cloudy', label: 'Cloudy' },
   { value: 'fog', label: 'Fog' },

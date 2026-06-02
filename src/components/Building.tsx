@@ -1,5 +1,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { DoubleSide, ExtrudeGeometry, InstancedBufferAttribute, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
+import {
+  BufferGeometry,
+  DoubleSide,
+  ExtrudeGeometry,
+  Float32BufferAttribute,
+  InstancedBufferAttribute,
+  InstancedMesh,
+  MeshBasicMaterial,
+  Object3D,
+  PlaneGeometry,
+  Shape,
+} from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
@@ -54,6 +65,88 @@ function createWindowMaterial(color: string) {
   return material;
 }
 
+function createGabledRoofGeometry(width: number, depth: number, height: number, axis: 'x' | 'z') {
+  const w = width + 0.16;
+  const d = depth + 0.16;
+  const y = height / 2 + 0.03;
+  const roofHeight = Math.min(0.8, Math.max(0.34, height * 0.16));
+  const vertices =
+    axis === 'x'
+      ? [
+          -w / 2,
+          y,
+          -d / 2,
+          w / 2,
+          y,
+          -d / 2,
+          -w / 2,
+          y,
+          d / 2,
+          w / 2,
+          y,
+          d / 2,
+          -w / 2,
+          y + roofHeight,
+          0,
+          w / 2,
+          y + roofHeight,
+          0,
+        ]
+      : [
+          -w / 2,
+          y,
+          -d / 2,
+          w / 2,
+          y,
+          -d / 2,
+          -w / 2,
+          y,
+          d / 2,
+          w / 2,
+          y,
+          d / 2,
+          0,
+          y + roofHeight,
+          -d / 2,
+          0,
+          y + roofHeight,
+          d / 2,
+        ];
+  const indices = axis === 'x' ? [0, 1, 5, 0, 5, 4, 2, 4, 5, 2, 5, 3, 0, 4, 2, 1, 3, 5] : [0, 4, 2, 2, 4, 5, 1, 3, 5, 1, 5, 4, 0, 1, 4, 2, 5, 3];
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function GabledRoof({ ambience, building }: { ambience: Ambience; building: BuildingData }) {
+  const [w, h, d] = building.size;
+  const roofSnowOpacity = Math.min(0.36, ambience.snowCover * 0.46);
+  const geometry = useMemo(() => createGabledRoofGeometry(w, d, h, building.roofAxis ?? (w >= d ? 'x' : 'z')), [building.roofAxis, d, h, w]);
+  const snowGeometry = useMemo(() => {
+    const snow = geometry.clone();
+    snow.translate(0, 0.045, 0);
+    return snow;
+  }, [geometry]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => snowGeometry.dispose(), [snowGeometry]);
+
+  return (
+    <>
+      <mesh castShadow receiveShadow geometry={geometry}>
+        <meshStandardMaterial color={building.roofColor} roughness={0.84} />
+      </mesh>
+      {roofSnowOpacity > 0.01 ? (
+        <mesh receiveShadow geometry={snowGeometry}>
+          <meshStandardMaterial color="#e4ebef" roughness={0.94} transparent opacity={roofSnowOpacity} depthWrite={false} />
+        </mesh>
+      ) : null}
+    </>
+  );
+}
+
 function WindowLayer({ ambience, color, slots }: { ambience: Ambience; color: string; slots: WindowSlot[] }) {
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
@@ -93,6 +186,7 @@ export function Building({ building, ambience }: BuildingProps) {
   const [x, y, z] = building.position;
   const [w, h, d] = building.size;
   const usesFootprint = Boolean(building.footprint && building.footprint.length >= 3);
+  const hasGabledRoof = building.roofStyle === 'gable';
   const roofSnowOpacity = Math.min(0.42, ambience.snowCover * 0.52);
   const projectingSigns = useMemo(() => {
     if (h > 8.9 || h < 2.2) return [];
@@ -102,7 +196,8 @@ export function Building({ building, ambience }: BuildingProps) {
     const side = building.signSides.length > 0 ? random.pick(building.signSides) : random.pick(sideChoices);
     const specs: ProjectingSignSpec[] = [];
 
-    if (!random.chance(usesFootprint ? 0.82 : 0.58)) return specs;
+    if (building.roofStyle === 'gable') return specs;
+    if (!random.chance(usesFootprint ? 0.18 : 0.14)) return specs;
     const sideSpan = side === 'north' || side === 'south' ? w : d;
     const count = random.chance(h < 5.2 ? 0.55 : 0.22) ? 2 : 1;
     for (let i = 0; i < count; i++) {
@@ -232,6 +327,7 @@ export function Building({ building, ambience }: BuildingProps) {
           <mesh castShadow receiveShadow geometry={extrudedGeometry}>
             <meshStandardMaterial color={building.color} roughness={0.86} />
           </mesh>
+          {hasGabledRoof ? <GabledRoof ambience={ambience} building={building} /> : null}
         </>
       ) : (
         <>
@@ -239,29 +335,36 @@ export function Building({ building, ambience }: BuildingProps) {
             <boxGeometry args={[w, h, d]} />
             <meshStandardMaterial color={building.color} roughness={0.86} />
           </mesh>
-          <mesh position={[0, h / 2 + 0.05, 0]} receiveShadow>
-            <boxGeometry args={[w + 0.12, 0.1, d + 0.12]} />
-            <meshStandardMaterial color={building.roofColor} roughness={0.82} />
-          </mesh>
-          {roofSnowOpacity > 0.01 ? (
-            <mesh position={[0, h / 2 + 0.125, 0]} receiveShadow>
-              <boxGeometry args={[w + 0.08, 0.025, d + 0.08]} />
-              <meshStandardMaterial color="#e4ebef" roughness={0.94} transparent opacity={roofSnowOpacity} depthWrite={false} />
-            </mesh>
-          ) : null}
+          {hasGabledRoof ? (
+            <GabledRoof ambience={ambience} building={building} />
+          ) : (
+            <>
+              <mesh position={[0, h / 2 + 0.05, 0]} receiveShadow>
+                <boxGeometry args={[w + 0.12, 0.1, d + 0.12]} />
+                <meshStandardMaterial color={building.roofColor} roughness={0.82} />
+              </mesh>
+              {roofSnowOpacity > 0.01 ? (
+                <mesh position={[0, h / 2 + 0.125, 0]} receiveShadow>
+                  <boxGeometry args={[w + 0.08, 0.025, d + 0.08]} />
+                  <meshStandardMaterial color="#e4ebef" roughness={0.94} transparent opacity={roofSnowOpacity} depthWrite={false} />
+                </mesh>
+              ) : null}
+            </>
+          )}
         </>
       )}
       {windowLayers.map((layer) => (
         <WindowLayer key={layer.color} ambience={ambience} color={layer.color} slots={layer.slots} />
       ))}
       {!usesFootprint &&
+        !hasGabledRoof &&
         building.signSides.map((side, index) => (
           <Sign key={`${building.id}-sign-${side}-${index}`} side={side} buildingSize={building.size} ambience={ambience} index={index} />
         ))}
       {projectingSigns.map((spec, index) => (
         <ProjectingSign key={`${building.id}-projecting-sign-${index}`} buildingSize={building.size} ambience={ambience} spec={spec} />
       ))}
-      {!usesFootprint ? <RooftopDetail size={building.size} seed={building.windowSeed + 42} hasStairs={building.hasStairs} /> : null}
+      {!usesFootprint && !hasGabledRoof ? <RooftopDetail size={building.size} seed={building.windowSeed + 42} hasStairs={building.hasStairs} /> : null}
       {h >= 9.8 && building.windowSeed % 3 === 0 ? <AviationLight height={h} seed={building.windowSeed} /> : null}
     </group>
   );

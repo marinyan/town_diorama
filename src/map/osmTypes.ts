@@ -33,4 +33,9 @@ export type OsmPayload = {
     north: number;
     east: number;
   };
+  center?: {
+    lat: number;
+    lon: number;
+  };
+  metersPerUnit?: number;
 };

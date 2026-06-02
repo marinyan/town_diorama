@@ -1,8 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-const osmPath = resolve('public/data/gotanda-toc-osm.json');
-const outputPath = resolve('public/data/gotanda-toc-elevation.json');
+const osmPath = resolve('public/data/kagurazaka-osm.json');
+const outputPath = resolve('public/data/kagurazaka-elevation.json');
 const zoom = 15;
 const columns = 33;
 const rows = 33;
@@ -118,10 +118,11 @@ await writeFile(
       attribution: 'Elevation data: Geospatial Information Authority of Japan (GSI) elevation tiles',
       fetchedAt: new Date().toISOString(),
       bbox,
-      center: {
+      center: osm.center ?? {
         lat: (bbox.south + bbox.north) / 2,
         lon: (bbox.west + bbox.east) / 2,
       },
+      metersPerUnit: osm.metersPerUnit ?? 8,
       rows,
       columns,
       baseMeters,

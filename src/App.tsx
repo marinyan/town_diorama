@@ -5,7 +5,7 @@ import { ControlPanel } from './components/ControlPanel';
 import { DioramaScene } from './components/DioramaScene';
 import { getAmbienceFromState, MockAmbienceState, TimePreset, WeatherMode } from './ambience';
 import { AmbienceTransitionSpeed, useTransitionedAmbience } from './useTransitionedAmbience';
-import { fetchGotandaWeather } from './weatherApi';
+import { fetchKagurazakaWeather } from './weatherApi';
 
 type TimeMode = TimePreset | 'live';
 type WeatherSetting = WeatherMode | 'live';
@@ -24,7 +24,7 @@ const manualWeatherPresets: Record<
 };
 
 const initialState: MockAmbienceState = {
-  location: 'Gotanda / TOC',
+  location: 'Kagurazaka',
   localTime: '18:20',
   weather: 'rain',
   temperatureC: 22,
@@ -40,7 +40,7 @@ export default function App() {
   const [mockState, setMockState] = useState<MockAmbienceState>(initialState);
   const [timeMode, setTimeMode] = useState<TimeMode>('live');
   const [weatherSetting, setWeatherSetting] = useState<WeatherSetting>('live');
-  const [weatherStatus, setWeatherStatus] = useState('syncing Gotanda weather...');
+  const [weatherStatus, setWeatherStatus] = useState('syncing Kagurazaka weather...');
   const [orbitPaused, setOrbitPaused] = useState(false);
   const [crowdVisible, setCrowdVisible] = useState(true);
   const [rainEnabled, setRainEnabled] = useState(true);
@@ -90,7 +90,7 @@ export default function App() {
 
     const syncWeather = async () => {
       try {
-        const result = await fetchGotandaWeather(controller.signal);
+        const result = await fetchKagurazakaWeather(controller.signal);
         if (!active || weatherSettingRef.current !== 'live') return;
         setTransitionSpeed('slow');
         setMockState((state) => ({
@@ -132,7 +132,7 @@ export default function App() {
     setWeatherSetting(weather);
     if (weather === 'live') {
       setTransitionSpeed('slow');
-      setWeatherStatus('syncing Gotanda weather...');
+      setWeatherStatus('syncing Kagurazaka weather...');
       return;
     }
     setTransitionSpeed('fast');

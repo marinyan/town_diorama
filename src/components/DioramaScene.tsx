@@ -99,8 +99,8 @@ export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible,
     };
 
     Promise.all([
-      loadJson<OsmPayload>('data/gotanda-toc-osm.json'),
-      loadJson<ElevationGrid>('data/gotanda-toc-elevation.json').catch(() => undefined),
+      loadJson<OsmPayload>('data/kagurazaka-osm.json'),
+      loadJson<ElevationGrid>('data/kagurazaka-elevation.json').catch(() => undefined),
     ])
       .then(([payload, elevationGrid]) => {
         if (!active) return;
