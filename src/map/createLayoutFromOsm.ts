@@ -89,12 +89,12 @@ function isNode(element: { type: string }): element is OsmNode {
   return element.type === 'node';
 }
 
-function parseHeight(tags: Record<string, string> | undefined, fallback: number) {
+function parseHeight(tags: Record<string, string> | undefined, fallback: number, metersPerUnit: number) {
   if (!tags) return fallback;
   const height = tags.height?.replace(/[^\d.]/g, '');
-  if (height) return Math.min(9.5, Math.max(1.4, Number(height) / 6.2));
+  if (height) return Math.min(7.5, Math.max(0.7, Number(height) / metersPerUnit));
   const levels = tags['building:levels'];
-  if (levels) return Math.min(9.5, Math.max(1.4, Number(levels) * 0.58));
+  if (levels) return Math.min(7.5, Math.max(0.7, (Number(levels) * 3.1) / metersPerUnit));
   return fallback;
 }
 
@@ -239,8 +239,9 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
       const w = maxX - minX;
       const d = maxZ - minZ;
       if (w < 0.45 || d < 0.45 || w > 12 || d > 12) continue;
-      const fallbackHeight = random.range(1.7, way.tags.building === 'apartments' || way.tags.building === 'commercial' ? 5.8 : 4.6);
-      const h = parseHeight(way.tags, fallbackHeight);
+      const fallbackHeightMeters = random.range(5.5, way.tags.building === 'apartments' || way.tags.building === 'commercial' ? 18 : 12);
+      const fallbackHeight = fallbackHeightMeters / metersPerUnit;
+      const h = parseHeight(way.tags, fallbackHeight, metersPerUnit);
       const x = (minX + maxX) / 2;
       const z = (minZ + maxZ) / 2;
       const groundY = sampleElevationUnits(elevationGrid, x, z);
