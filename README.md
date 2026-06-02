@@ -43,7 +43,15 @@ Create a Windows portable executable:
 npm run package:win
 ```
 
+Create a Windows `.scr` screensaver-style copy:
+
+```bash
+npm run package:scr
+```
+
 The packaged shell starts fullscreen/kiosk-style with no menu bar. Press `Esc` or `Q` to quit. The OSM data in `public/data` is bundled as an extra resource; the app also includes the current `dist` build.
+
+The `.scr` build handles `/s` as fullscreen playback. `/p` preview and `/c` configuration calls currently exit immediately rather than showing a settings UI.
 
 ## Weather And Time API Notes
 

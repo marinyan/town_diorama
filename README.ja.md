@@ -51,7 +51,14 @@ Windows portable exe を作成:
 npm.cmd run package:win
 ```
 
+Windows `.scr` 風ファイルを作成:
+
+```powershell
+npm.cmd run package:scr
+```
+
 Electron版はフルスクリーン/kiosk風に起動します。`Esc` または `Q` で終了できます。
+`.scr` 版は `/s` でフルスクリーン起動します。現時点では `/p` プレビューと `/c` 設定呼び出しは、設定UIを出さずに即終了します。
 
 ## 操作
 
@@ -130,5 +137,5 @@ npm.cmd run fetch:elevation
 ## 注意
 
 - Electron runtime の取得が不完全な場合は、もう一度 `npm.cmd install` を実行してください。
-- 現状の `.scr` 変換は未実装です。Windowsスクリーンセーバーとして完全対応するには `/s`, `/p`, `/c` などの引数対応が必要です。
+- `.scr` 版は簡易対応です。Windowsスクリーンセーバーとして完全対応するには、プレビュー親ウィンドウへの埋め込みや設定UIが追加で必要です。
 - Live Weather は外部APIにアクセスします。完全オフライン運用では手動天気モードを使ってください。

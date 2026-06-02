@@ -2,8 +2,16 @@ const { app, BrowserWindow, Menu, screen } = require('electron');
 const path = require('node:path');
 
 const isDev = process.argv.includes('--dev');
+const saverArg = process.argv.find((arg) => /^\/[scp](?::|$)/i.test(arg));
+const isScreensaverPreview = saverArg?.toLowerCase().startsWith('/p');
+const isScreensaverConfig = saverArg?.toLowerCase().startsWith('/c');
 
 function createWindow() {
+  if (isScreensaverPreview || isScreensaverConfig) {
+    app.quit();
+    return;
+  }
+
   Menu.setApplicationMenu(null);
 
   const display = screen.getPrimaryDisplay();
