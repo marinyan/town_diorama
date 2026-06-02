@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { DoubleSide, ExtrudeGeometry, InstancedBufferAttribute, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
@@ -37,7 +37,10 @@ function createWindowMaterial(color: string) {
     depthWrite: false,
     side: DoubleSide,
   });
+  material.customProgramCacheKey = () => 'window-instance-alpha-v1';
   material.onBeforeCompile = (shader) => {
+    // Built-in materials do not support per-instance opacity, so each window
+    // layer carries a tiny alpha attribute and lets the regular material do the rest.
     shader.vertexShader = [
       'attribute float instanceAlpha;',
       'varying float vInstanceAlpha;',
@@ -60,6 +63,9 @@ function WindowLayer({ ambience, color, slots }: { ambience: Ambience; color: st
     return plane;
   }, [slots.length]);
   const material = useMemo(() => createWindowMaterial(color), [color]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => material.dispose(), [material]);
 
   useLayoutEffect(() => {
     const mesh = windowRef.current;
@@ -155,6 +161,8 @@ export function Building({ building, ambience }: BuildingProps) {
       }, 0);
       const outwardSign = area >= 0 ? 1 : -1;
 
+      // OSM buildings use their real footprint, so windows are placed along
+      // each polygon edge instead of on an invisible bounding rectangle.
       for (let edgeIndex = 0; edgeIndex < building.footprint.length; edgeIndex++) {
         const start = building.footprint[edgeIndex];
         const end = building.footprint[(edgeIndex + 1) % building.footprint.length];
@@ -200,14 +208,21 @@ export function Building({ building, ambience }: BuildingProps) {
     }
     return windows;
   }, [building.footprint, building.windowSeed, d, h, usesFootprint, w]);
-  const windowLayers = useMemo(
-    () => [
-      { color: '#fff1c6', slots: windowSlots.filter((window) => window.warmth < 0.34) },
-      { color: '#ffe0a4', slots: windowSlots.filter((window) => window.warmth >= 0.34 && window.warmth < 0.72) },
-      { color: '#ffd28f', slots: windowSlots.filter((window) => window.warmth >= 0.72) },
-    ],
-    [windowSlots],
-  );
+  const windowLayers = useMemo(() => {
+    const layers = [
+      { color: '#fff1c6', slots: [] as WindowSlot[] },
+      { color: '#ffe0a4', slots: [] as WindowSlot[] },
+      { color: '#ffd28f', slots: [] as WindowSlot[] },
+    ];
+
+    for (const window of windowSlots) {
+      if (window.warmth < 0.34) layers[0].slots.push(window);
+      else if (window.warmth < 0.72) layers[1].slots.push(window);
+      else layers[2].slots.push(window);
+    }
+
+    return layers.filter((layer) => layer.slots.length > 0);
+  }, [windowSlots]);
 
   return (
     <group position={[x, y, z]}>

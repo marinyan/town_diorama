@@ -34,6 +34,8 @@ export function WeatherSystem({ ambience, visible }: WeatherSystemProps) {
   const dummy = useMemo(() => new Object3D(), []);
   const geometry = useMemo(() => new BoxGeometry(1, 1, 1), []);
   const material = useMemo(() => new MeshBasicMaterial({ color: '#b8d9ff', transparent: true, opacity: 0.28, depthWrite: false }), []);
+  // Keep one deterministic particle pool alive and only vary the active count;
+  // this avoids rain/snow flicker when live weather updates arrive.
   const drops = useMemo(() => {
     const random = createRandom(2211);
     return Array.from({ length: maxDrops }, (): Drop => ({

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Ambience, blendAmbience } from './ambience';
 
 export type AmbienceTransitionSpeed = 'slow' | 'fast';
@@ -17,6 +17,8 @@ export function useTransitionedAmbience(target: Ambience, speed: AmbienceTransit
   const speedRef = useRef(speed);
 
   useEffect(() => {
+    // Start each transition from the currently displayed ambience, not the
+    // previous target, so rapid button changes still blend smoothly.
     fromRef.current = displayRef.current;
     targetRef.current = target;
     startedAtRef.current = performance.now();
@@ -40,5 +42,5 @@ export function useTransitionedAmbience(target: Ambience, speed: AmbienceTransit
     return () => window.cancelAnimationFrame(frame);
   }, [target]);
 
-  return useMemo(() => display, [display]);
+  return display;
 }
