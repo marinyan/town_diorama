@@ -146,3 +146,48 @@ export function getAmbienceFromState(state: MockAmbienceState): Ambience {
     ambientSoundMood: soundMood,
   };
 }
+
+function hexToRgb(color: string) {
+  const normalized = color.replace('#', '');
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex({ r, g, b }: { r: number; g: number; b: number }) {
+  const toHex = (value: number) => Math.round(value).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function lerpNumber(from: number, to: number, t: number) {
+  return from + (to - from) * t;
+}
+
+function lerpColor(from: string, to: string, t: number) {
+  const a = hexToRgb(from);
+  const b = hexToRgb(to);
+  return rgbToHex({
+    r: lerpNumber(a.r, b.r, t),
+    g: lerpNumber(a.g, b.g, t),
+    b: lerpNumber(a.b, b.b, t),
+  });
+}
+
+export function blendAmbience(from: Ambience, to: Ambience, t: number): Ambience {
+  const eased = 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+  return {
+    ...to,
+    skyColor: lerpColor(from.skyColor, to.skyColor, eased),
+    fogColor: lerpColor(from.fogColor, to.fogColor, eased),
+    sunlightIntensity: lerpNumber(from.sunlightIntensity, to.sunlightIntensity, eased),
+    signEmissiveIntensity: lerpNumber(from.signEmissiveIntensity, to.signEmissiveIntensity, eased),
+    windowLightProbability: to.windowLightProbability,
+    pedestrianDensity: lerpNumber(from.pedestrianDensity, to.pedestrianDensity, eased),
+    nightlifeDensity: lerpNumber(from.nightlifeDensity, to.nightlifeDensity, eased),
+    umbrellaRatio: lerpNumber(from.umbrellaRatio, to.umbrellaRatio, eased),
+    rainIntensity: lerpNumber(from.rainIntensity, to.rainIntensity, eased),
+    wetRoadReflection: lerpNumber(from.wetRoadReflection, to.wetRoadReflection, eased),
+  };
+}

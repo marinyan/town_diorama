@@ -4,6 +4,7 @@ import { AmbienceController } from './components/AmbienceController';
 import { ControlPanel } from './components/ControlPanel';
 import { DioramaScene } from './components/DioramaScene';
 import { getAmbienceFromState, MockAmbienceState, TimePreset, WeatherMode } from './ambience';
+import { AmbienceTransitionSpeed, useTransitionedAmbience } from './useTransitionedAmbience';
 import { fetchShinjukuWeather } from './weatherApi';
 
 type TimeMode = TimePreset | 'live';
@@ -38,9 +39,11 @@ export default function App() {
   const [orbitPaused, setOrbitPaused] = useState(false);
   const [crowdVisible, setCrowdVisible] = useState(true);
   const [rainEnabled, setRainEnabled] = useState(true);
+  const [transitionSpeed, setTransitionSpeed] = useState<AmbienceTransitionSpeed>('slow');
   const weatherSettingRef = useRef(weatherSetting);
 
   const ambience = useMemo(() => getAmbienceFromState(mockState), [mockState]);
+  const displayAmbience = useTransitionedAmbience(ambience, transitionSpeed);
 
   useEffect(() => {
     weatherSettingRef.current = weatherSetting;
@@ -53,6 +56,7 @@ export default function App() {
       const now = new Date();
       const localTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const day = now.getDay();
+      setTransitionSpeed('slow');
       setMockState((state) => ({
         ...state,
         localTime,
@@ -82,6 +86,7 @@ export default function App() {
       try {
         const result = await fetchShinjukuWeather(controller.signal);
         if (!active || weatherSettingRef.current !== 'live') return;
+        setTransitionSpeed('slow');
         setMockState((state) => ({
           ...state,
           weather: result.weather,
@@ -118,9 +123,11 @@ export default function App() {
   const setWeather = (weather: WeatherSetting) => {
     setWeatherSetting(weather);
     if (weather === 'live') {
+      setTransitionSpeed('slow');
       setWeatherStatus('syncing Shinjuku weather...');
       return;
     }
+    setTransitionSpeed('fast');
     setMockState((state) => ({ ...state, ...manualWeatherPresets[weather] }));
     setWeatherStatus(`mock ${weather}`);
     if (weather === 'rain' || weather === 'snow' || weather === 'drizzle' || weather === 'thunderstorm') {
@@ -130,6 +137,7 @@ export default function App() {
 
   const setTime = (mode: TimeMode) => {
     if (mode === 'live') {
+      setTransitionSpeed('slow');
       setTimeMode('live');
       return;
     }
@@ -142,6 +150,7 @@ export default function App() {
       lateNight: '01:20',
     };
     setTimeMode(mode);
+    setTransitionSpeed('fast');
     setMockState((state) => ({
       ...state,
       localTime: times[mode],
@@ -151,7 +160,7 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <AmbienceController ambience={ambience} />
+      <AmbienceController ambience={displayAmbience} />
       <Canvas
         shadows
         dpr={[1, 1.75]}
@@ -160,7 +169,7 @@ export default function App() {
       >
         <Suspense fallback={null}>
           <DioramaScene
-            ambience={ambience}
+            ambience={displayAmbience}
             orbitPaused={orbitPaused}
             crowdVisible={crowdVisible}
             rainVisible={
@@ -174,7 +183,7 @@ export default function App() {
         </Suspense>
       </Canvas>
       <ControlPanel
-        ambience={ambience}
+        ambience={displayAmbience}
         mockState={mockState}
         timeMode={timeMode}
         weatherSetting={weatherSetting}
