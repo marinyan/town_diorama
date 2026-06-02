@@ -79,3 +79,15 @@ node scripts/fetch-osm.mjs
 ```
 
 The converter in `src/map/createLayoutFromOsm.ts` projects latitude/longitude into local diorama coordinates, maps highway ways to road meshes and crowd paths, and maps building footprints to low-poly building blocks. Building height uses OSM `height` or `building:levels` when present, otherwise a deterministic estimated height.
+
+## Embedded Elevation Data
+
+The scene also loads `public/data/shinjuku-elevation.json` when present. This file is generated from Geospatial Information Authority of Japan elevation tiles and stores a compact relative-height grid for the same Shinjuku bbox as the OSM sample.
+
+Refresh the local elevation sample with:
+
+```bash
+npm run fetch:elevation
+```
+
+The layout converter samples that grid to place OSM buildings, roads, and crowd paths on the same toy-scale terrain height. OSM structural tags such as `bridge`, `tunnel`, `layer`, `highway=steps`, and `incline` are still applied on top of the real elevation grid for visible urban verticality.

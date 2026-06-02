@@ -5,6 +5,7 @@ import { Group, PointLight, Vector3 } from 'three';
 import { Ambience } from '../ambience';
 import { CityLayout, createCityLayout } from '../cityData';
 import { createCityLayoutFromOsm } from '../map/createLayoutFromOsm';
+import { ElevationGrid } from '../map/elevationTypes';
 import { OsmPayload } from '../map/osmTypes';
 import { CityBlock } from './CityBlock';
 import { IconCrowd } from './IconCrowd';
@@ -74,14 +75,19 @@ export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible 
 
   useEffect(() => {
     let active = true;
-    fetch('/data/shinjuku-osm.json')
-      .then((response) => {
-        if (!response.ok) throw new Error(`OSM data unavailable: ${response.status}`);
-        return response.json() as Promise<OsmPayload>;
-      })
-      .then((payload) => {
+    const loadJson = async <T,>(url: string) => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`${url} unavailable: ${response.status}`);
+      return response.json() as Promise<T>;
+    };
+
+    Promise.all([
+      loadJson<OsmPayload>('/data/shinjuku-osm.json'),
+      loadJson<ElevationGrid>('/data/shinjuku-elevation.json').catch(() => undefined),
+    ])
+      .then(([payload, elevationGrid]) => {
         if (!active) return;
-        setLayout(createCityLayoutFromOsm(payload));
+        setLayout(createCityLayoutFromOsm(payload, 31415, elevationGrid));
       })
       .catch(() => {
         if (active) setLayout(fallbackLayout);

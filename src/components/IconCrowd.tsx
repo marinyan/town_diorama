@@ -44,7 +44,7 @@ export function IconCrowd({ paths, buildings, ambience }: IconCrowdProps) {
         z: building.position[2],
         w: building.size[0],
         d: building.size[2],
-        top: building.size[1],
+        top: building.position[1] + building.size[1] / 2,
       })),
     [buildings],
   );

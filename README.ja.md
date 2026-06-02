@@ -1,9 +1,9 @@
 # Just Watching: Urban Diorama Viewer
 
-新宿周辺の裏路地を、上から静かに眺めるためのブラウザベース都市ジオラマです。  
-Vite + React + TypeScript + React Three Fiber で作られていて、街は OpenStreetMap 由来の道路・建物データと低ポリの手続き的な表現を組み合わせています。
+新宿周辺の裏路地を、上から静かに眺めるためのブラウザベース都市ジオラマです。
+Vite + React + TypeScript + React Three Fiber で作られており、OpenStreetMap 由来の道路・建物データ、国土地理院の標高タイル由来の組み込み標高データ、手続き的な低ポリ表現を組み合わせています。
 
-目的やゲーム性はありません。小さな青いフィールドマップ風アイコンが街を流れ、時間・天気・降水量・風速に合わせて街の雰囲気が変わります。
+目的やゲーム性はありません。小さな青いフィールドマップ風アイコンが街を流れ、時間帯・天気・降水量・風速によって雰囲気が変わります。
 
 ## セットアップ
 
@@ -19,7 +19,7 @@ PowerShell で `npm` が実行ポリシーに止められる場合は、`npm.cmd
 npm.cmd run dev
 ```
 
-表示された URL、通常は以下をブラウザで開きます。
+表示されたURLをブラウザで開きます。通常は以下です。
 
 ```text
 http://127.0.0.1:5173/
@@ -51,11 +51,11 @@ Windows portable exe を作成:
 npm.cmd run package:win
 ```
 
-Electron 版はフルスクリーン/kiosk風に起動します。`Esc` または `Q` で終了できます。
+Electron版はフルスクリーン/kiosk風に起動します。`Esc` または `Q` で終了できます。
 
 ## 操作
 
-右上の最小パネルから以下を変更できます。
+右上の小さなパネルから以下を変更できます。
 
 - カメラ自動オービットの一時停止/再開
 - 時間帯: `Now`, `Morning`, `Noon`, `Dusk`, `Night`, `Late`
@@ -63,14 +63,13 @@ Electron 版はフルスクリーン/kiosk風に起動します。`Esc` また�
 - 群衆表示
 - 降水表示
 
-`Now` はブラウザ/PCの現在時刻に追随します。  
+`Now` はブラウザ/PCの現在時刻に追随します。
 `Live Shinjuku` は Open-Meteo から新宿付近の現在天気を取得します。
 
 ## 天気と時間
 
 Live Weather では Open-Meteo API を使っています。
-
-取得している値:
+取得している主な値:
 
 - 気温
 - weather code
@@ -78,31 +77,37 @@ Live Weather では Open-Meteo API を使っています。
 - 雲量
 - 10m風速
 
-降水量が増えると、雨・雪・霧雨・雷雨の粒子数や濃さが変わります。  
-風速が上がると、雨筋や雪の横流れが強くなります。
+降水量が増えると、雨・雪・霧雨・雷雨の粒子数、濡れた道路の反射、傘アイコン率が変わります。
+風速は雨筋の角度、雨の流れ、雷雨時の横殴り感、雪の漂いに反映されます。
 
-天気の分類:
+## OSM地図データ
 
-- `clear`
-- `cloudy`
-- `fog`
-- `drizzle`
-- `rain`
-- `snow`
-- `thunderstorm`
-
-## OSM 地形データ
-
-アプリはまず `public/data/shinjuku-osm.json` を読み込みます。  
+アプリはまず `public/data/shinjuku-osm.json` を読み込みます。
 このファイルには Overpass API から取得した OpenStreetMap の道路・建物データが入っています。
+ファイルがない場合は、決定的乱数による手続き生成レイアウトにフォールバックします。
 
-再取得する場合:
+OSMサンプルを再取得する場合:
 
 ```powershell
 node scripts/fetch-osm.mjs
 ```
 
-OSM データが読めない場合は、決定的乱数による手続き生成レイアウトにフォールバックします。
+`src/map/createLayoutFromOsm.ts` は緯度経度をローカルなジオラマ座標へ投影し、道路をメッシュと群衆パスに、建物 footprint を低ポリ建物に変換します。建物高さは OSM の `height` または `building:levels` があれば使い、なければ決定的な推定値を使います。
+
+## 組み込み標高データ
+
+アプリは `public/data/shinjuku-elevation.json` がある場合、国土地理院の標高タイルから生成した相対標高グリッドを読み込みます。
+この標高グリッドは OSM サンプルと同じ新宿 bbox を対象にしており、建物の基礎、道路、人の経路に同じ高さとして反映されます。
+
+標高サンプルを再取得する場合:
+
+```powershell
+npm.cmd run fetch:elevation
+```
+
+実標高に加えて、OSM の `bridge`, `tunnel`, `layer`, `highway=steps`, `incline` などの都市構造タグも上乗せされます。これにより、実際の地形の微妙な起伏と、階段・高架・地下通路のような街の上下構造を両方表現します。
+
+出典: 国土地理院 標高タイル
 
 ## 実装メモ
 
@@ -117,11 +122,10 @@ OSM データが読めない場合は、決定的乱数による手続き生成�
 - `src/ambience.ts`
 - `src/weatherApi.ts`
 - `src/map/createLayoutFromOsm.ts`
+- `src/map/elevationSampler.ts`
 
-建物は OSM の footprint を押し出して表示します。複雑すぎる footprint は矩形近似にフォールバックします。
-
-## 注意点
+## 注意
 
 - Electron runtime の取得が不完全な場合は、もう一度 `npm.cmd install` を実行してください。
-- 現状の `.scr` 互換はまだ未実装です。Windows スクリーンセーバーとして完全対応するには `/s`, `/p`, `/c` などの引数対応が必要です。
+- 現状の `.scr` 変換は未実装です。Windowsスクリーンセーバーとして完全対応するには `/s`, `/p`, `/c` などの引数対応が必要です。
 - Live Weather は外部APIにアクセスします。完全オフライン運用では手動天気モードを使ってください。

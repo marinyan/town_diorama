@@ -1,6 +1,8 @@
 import { Vector3 } from 'three';
 import { BuildingData, CityLayout, CrowdPath, RoadData } from '../cityData';
 import { createRandom } from '../random';
+import { sampleElevationUnits } from './elevationSampler';
+import { ElevationGrid } from './elevationTypes';
 import { OsmNode, OsmPayload, OsmWay } from './osmTypes';
 import { projectLonLat } from './projectGeo';
 
@@ -133,7 +135,7 @@ function roadElevation(tags: Record<string, string> | undefined) {
   return Math.max(-0.18, Math.min(1.45, elevation));
 }
 
-export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): CityLayout {
+export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, elevationGrid?: ElevationGrid): CityLayout {
   const random = createRandom(seed);
   const nodes = new Map<number, OsmNode>();
   payload.elements.filter(isNode).forEach((node) => nodes.set(node.id, node));
@@ -168,12 +170,13 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
       const h = parseHeight(way.tags, fallbackHeight);
       const x = (minX + maxX) / 2;
       const z = (minZ + maxZ) / 2;
+      const groundY = sampleElevationUnits(elevationGrid, x, z);
       if (Math.abs(x) > fieldLimit.x || Math.abs(z) > fieldLimit.z) continue;
       const footprint = simplifyFootprint(points2.map((point) => [point.x - x, point.y - z]));
       if (!footprint) continue;
       buildings.push({
         id: `osm-building-${way.id}`,
-        position: [x, h / 2, z],
+        position: [x, groundY + h / 2, z],
         size: [Math.max(0.6, w), h, Math.max(0.6, d)],
         footprint,
         color: random.pick(['#687170', '#746f68', '#606971', '#76786f', '#5d6764']),
@@ -182,7 +185,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
         hasStairs: random.chance(0.28),
         windowSeed: random.int(10, 9000),
       });
-      doors.push(new Vector3(x + random.range(-w / 3, w / 3), 0.09, z + d / 2 + 0.25));
+      doors.push(new Vector3(x + random.range(-w / 3, w / 3), groundY + 0.09, z + d / 2 + 0.25));
       continue;
     }
 
@@ -190,7 +193,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
       // OSM rarely gives true street-level terrain height, but structural tags
       // like steps/bridge/tunnel/layer are enough to imply toy-scale verticality.
       const elevation = roadElevation(way.tags);
-      const roadPoints = points2.map((point) => new Vector3(point.x, 0.035 + elevation, point.y));
+      const roadPoints = points2.map((point) => new Vector3(point.x, 0.035 + elevation + sampleElevationUnits(elevationGrid, point.x, point.y), point.y));
       if (!roadPoints.some(isInsideField) && !roadPoints.some((point, index) => index > 0 && isSegmentNearField(roadPoints[index - 1], point))) {
         continue;
       }
@@ -208,7 +211,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
           id: `osm-path-${way.id}`,
           zone: road.kind === 'main' ? 'commute' : road.kind === 'alley' ? 'nightlife' : 'scatter',
           points: roadPoints.map((position, index) => ({
-            position: position.clone().setY(0.08 + elevation),
+            position: position.clone().setY(position.y + 0.045),
             pause: index === 1 && random.chance(0.35) ? random.range(0.5, 1.6) : 0,
           })),
         });
