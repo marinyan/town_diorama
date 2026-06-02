@@ -10,14 +10,17 @@ import { fetchShinjukuWeather } from './weatherApi';
 type TimeMode = TimePreset | 'live';
 type WeatherSetting = WeatherMode | 'live';
 
-const manualWeatherPresets: Record<WeatherMode, Pick<MockAmbienceState, 'weather' | 'precipitationMm' | 'windSpeedKmh'>> = {
-  clear: { weather: 'clear', precipitationMm: 0, windSpeedKmh: 4 },
-  cloudy: { weather: 'cloudy', precipitationMm: 0, windSpeedKmh: 5 },
-  fog: { weather: 'fog', precipitationMm: 0, windSpeedKmh: 3 },
-  drizzle: { weather: 'drizzle', precipitationMm: 0.25, windSpeedKmh: 7 },
-  rain: { weather: 'rain', precipitationMm: 1.1, windSpeedKmh: 9 },
-  snow: { weather: 'snow', precipitationMm: 0.8, windSpeedKmh: 6 },
-  thunderstorm: { weather: 'thunderstorm', precipitationMm: 3.2, windSpeedKmh: 32 },
+const manualWeatherPresets: Record<
+  WeatherMode,
+  Pick<MockAmbienceState, 'weather' | 'precipitationMm' | 'snowfallCm' | 'snowDepthCm' | 'windSpeedKmh'>
+> = {
+  clear: { weather: 'clear', precipitationMm: 0, snowfallCm: 0, snowDepthCm: 0, windSpeedKmh: 4 },
+  cloudy: { weather: 'cloudy', precipitationMm: 0, snowfallCm: 0, snowDepthCm: 0, windSpeedKmh: 5 },
+  fog: { weather: 'fog', precipitationMm: 0, snowfallCm: 0, snowDepthCm: 0, windSpeedKmh: 3 },
+  drizzle: { weather: 'drizzle', precipitationMm: 0.25, snowfallCm: 0, snowDepthCm: 0, windSpeedKmh: 7 },
+  rain: { weather: 'rain', precipitationMm: 1.1, snowfallCm: 0, snowDepthCm: 0, windSpeedKmh: 9 },
+  snow: { weather: 'snow', precipitationMm: 0.8, snowfallCm: 0.9, snowDepthCm: 2.6, windSpeedKmh: 6 },
+  thunderstorm: { weather: 'thunderstorm', precipitationMm: 3.2, snowfallCm: 0, snowDepthCm: 0, windSpeedKmh: 32 },
 };
 
 const initialState: MockAmbienceState = {
@@ -26,6 +29,8 @@ const initialState: MockAmbienceState = {
   weather: 'rain',
   temperatureC: 22,
   precipitationMm: 0.8,
+  snowfallCm: 0,
+  snowDepthCm: 0,
   windSpeedKmh: 8,
   isWeekend: false,
   isHoliday: false,
@@ -92,10 +97,12 @@ export default function App() {
           weather: result.weather,
           temperatureC: result.temperatureC,
           precipitationMm: result.precipitation,
+          snowfallCm: result.snowfallCm,
+          snowDepthCm: result.snowDepthCm,
           windSpeedKmh: result.windSpeedKmh,
         }));
         setWeatherStatus(
-          `Open-Meteo ${result.fetchedAt} / code ${result.weatherCode} / clouds ${result.cloudCover}% / rain ${result.precipitation}mm / wind ${result.windSpeedKmh.toFixed(1)}km/h`,
+          `Open-Meteo ${result.fetchedAt} / code ${result.weatherCode} / clouds ${result.cloudCover}% / rain ${result.precipitation}mm / snow ${result.snowfallCm}cm / depth ${result.snowDepthCm}cm / wind ${result.windSpeedKmh.toFixed(1)}km/h`,
         );
         if (result.weather === 'rain' || result.weather === 'snow' || result.weather === 'drizzle' || result.weather === 'thunderstorm') {
           setRainEnabled(true);

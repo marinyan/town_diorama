@@ -7,6 +7,8 @@ export type MockAmbienceState = {
   weather: WeatherMode;
   temperatureC: number;
   precipitationMm: number;
+  snowfallCm: number;
+  snowDepthCm: number;
   windSpeedKmh: number;
   isWeekend: boolean;
   isHoliday: boolean;
@@ -24,6 +26,7 @@ export type Ambience = {
   nightlifeDensity: number;
   umbrellaRatio: number;
   rainIntensity: number;
+  snowCover: number;
   wetRoadReflection: number;
   ambientSoundMood: string;
 };
@@ -54,7 +57,12 @@ export function getAmbienceFromState(state: MockAmbienceState): Ambience {
             : state.weather === 'thunderstorm'
               ? 0.42
               : 0.3;
-  const rainIntensity = Math.min(1, Math.max(0, state.precipitationMm / (state.weather === 'drizzle' ? 1.6 : 3)));
+  const snowFallIntensity = Math.min(1, Math.max(0, state.snowfallCm / 1.8));
+  const snowCover = Math.min(1, Math.max(0, state.snowDepthCm / 8));
+  const rainIntensity =
+    state.weather === 'snow'
+      ? Math.max(snowFallIntensity, Math.min(1, state.precipitationMm / 3))
+      : Math.min(1, Math.max(0, state.precipitationMm / (state.weather === 'drizzle' ? 1.6 : 3)));
   const umbrellaRatio =
     state.weather === 'rain' || state.weather === 'thunderstorm'
       ? Math.min(0.68, 0.18 + rainIntensity * 0.5)
@@ -68,7 +76,7 @@ export function getAmbienceFromState(state: MockAmbienceState): Ambience {
 
   const byTime: Record<
     TimePreset,
-    Omit<Ambience, 'state' | 'timePreset' | 'ambientSoundMood' | 'umbrellaRatio' | 'rainIntensity' | 'wetRoadReflection'>
+    Omit<Ambience, 'state' | 'timePreset' | 'ambientSoundMood' | 'umbrellaRatio' | 'rainIntensity' | 'snowCover' | 'wetRoadReflection'>
   > = {
     morning: {
       skyColor: '#b9d3dc',
@@ -133,6 +141,7 @@ export function getAmbienceFromState(state: MockAmbienceState): Ambience {
     ...byTime[timePreset],
     umbrellaRatio,
     rainIntensity,
+    snowCover,
     wetRoadReflection:
       state.weather === 'rain' || state.weather === 'thunderstorm'
         ? Math.max(0.24, 0.28 + rainIntensity * 0.58)
@@ -188,6 +197,7 @@ export function blendAmbience(from: Ambience, to: Ambience, t: number): Ambience
     nightlifeDensity: lerpNumber(from.nightlifeDensity, to.nightlifeDensity, eased),
     umbrellaRatio: lerpNumber(from.umbrellaRatio, to.umbrellaRatio, eased),
     rainIntensity: lerpNumber(from.rainIntensity, to.rainIntensity, eased),
+    snowCover: lerpNumber(from.snowCover, to.snowCover, eased),
     wetRoadReflection: lerpNumber(from.wetRoadReflection, to.wetRoadReflection, eased),
   };
 }

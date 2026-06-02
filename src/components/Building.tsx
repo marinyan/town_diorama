@@ -93,6 +93,7 @@ export function Building({ building, ambience }: BuildingProps) {
   const [x, y, z] = building.position;
   const [w, h, d] = building.size;
   const usesFootprint = Boolean(building.footprint && building.footprint.length >= 3);
+  const roofSnowOpacity = Math.min(0.42, ambience.snowCover * 0.52);
   const projectingSigns = useMemo(() => {
     if (h > 8.9 || h < 2.2) return [];
     const random = createRandom(building.windowSeed + 1205);
@@ -242,6 +243,12 @@ export function Building({ building, ambience }: BuildingProps) {
             <boxGeometry args={[w + 0.12, 0.1, d + 0.12]} />
             <meshStandardMaterial color={building.roofColor} roughness={0.82} />
           </mesh>
+          {roofSnowOpacity > 0.01 ? (
+            <mesh position={[0, h / 2 + 0.125, 0]} receiveShadow>
+              <boxGeometry args={[w + 0.08, 0.025, d + 0.08]} />
+              <meshStandardMaterial color="#e4ebef" roughness={0.94} transparent opacity={roofSnowOpacity} depthWrite={false} />
+            </mesh>
+          ) : null}
         </>
       )}
       {windowLayers.map((layer) => (

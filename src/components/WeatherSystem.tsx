@@ -27,7 +27,7 @@ export function WeatherSystem({ ambience, visible }: WeatherSystemProps) {
   const isDrizzle = ambience.state.weather === 'drizzle';
   const isStorm = ambience.state.weather === 'thunderstorm';
   const hasPrecip = ambience.state.weather === 'rain' || isSnow || isDrizzle || isStorm;
-  const rainIntensity = hasPrecip ? Math.max(isDrizzle ? 0.035 : 0.06, ambience.rainIntensity) : 0;
+  const rainIntensity = hasPrecip ? Math.max(isSnow ? 0.025 : isDrizzle ? 0.035 : 0.06, ambience.rainIntensity) : 0;
   const windFactor = Math.min(1, Math.max(0, ambience.state.windSpeedKmh / 38));
   const count = Math.min(maxDrops, Math.round(maxDrops * rainIntensity * (isSnow ? 0.72 : isDrizzle ? 0.45 : isStorm ? 1.15 : 1)));
   const meshRef = useRef<InstancedMesh>(null);

@@ -61,7 +61,8 @@ export function ControlPanel({
           <h1 className="panel-title">Just Watching / {mockState.location}</h1>
           <p className="panel-meta">
             {mockState.localTime} / {mockState.weather} / {mockState.precipitationMm.toFixed(2)}mm /{' '}
-            {mockState.windSpeedKmh.toFixed(1)}km/h / density {ambience.pedestrianDensity.toFixed(2)}
+            snow {mockState.snowfallCm.toFixed(2)}cm / depth {mockState.snowDepthCm.toFixed(1)}cm / {mockState.windSpeedKmh.toFixed(1)}km/h /
+            density {ambience.pedestrianDensity.toFixed(2)}
           </p>
         </div>
         <div className="temp-pill">{mockState.temperatureC}C</div>

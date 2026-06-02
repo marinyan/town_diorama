@@ -17,7 +17,7 @@ const fieldSize = { width: 72, depth: 62 };
 const terrainResolution = { columns: 45, rows: 39 };
 const terrainBaseY = -0.3;
 
-function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
+function TerrainSurface({ grid, snowCover }: { grid?: ElevationGrid; snowCover: number }) {
   const terrainGeometry = useMemo(() => {
     if (!grid) return null;
     const vertices: number[] = [];
@@ -82,11 +82,21 @@ function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
   }, [grid]);
 
   const material = useMemo(() => new MeshStandardMaterial({ color: '#3b423e', roughness: 0.88 }), []);
+  const snowMaterial = useMemo(
+    () => new MeshStandardMaterial({ color: '#dfe8ee', roughness: 0.92, transparent: true, depthWrite: false }),
+    [],
+  );
   const skirtMaterial = useMemo(() => new MeshStandardMaterial({ color: '#535b57', roughness: 0.78 }), []);
   useEffect(() => () => terrainGeometry?.dispose(), [terrainGeometry]);
   useEffect(() => () => skirtGeometry?.dispose(), [skirtGeometry]);
   useEffect(() => () => material.dispose(), [material]);
+  useEffect(() => () => snowMaterial.dispose(), [snowMaterial]);
   useEffect(() => () => skirtMaterial.dispose(), [skirtMaterial]);
+
+  useEffect(() => {
+    snowMaterial.opacity = snowCover * 0.58;
+    snowMaterial.needsUpdate = true;
+  }, [snowCover, snowMaterial]);
 
   if (!terrainGeometry || !skirtGeometry) {
     return (
@@ -100,6 +110,7 @@ function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
   return (
     <group>
       <mesh receiveShadow geometry={terrainGeometry} material={material} />
+      {snowCover > 0.01 ? <mesh position={[0, 0.035, 0]} receiveShadow geometry={terrainGeometry} material={snowMaterial} /> : null}
       <mesh receiveShadow geometry={skirtGeometry} material={skirtMaterial} />
     </group>
   );
@@ -131,7 +142,7 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
 
   return (
     <group>
-      <TerrainSurface grid={layout.elevationGrid} />
+      <TerrainSurface grid={layout.elevationGrid} snowCover={ambience.snowCover} />
 
       {isOsm
         ? layout.roads?.flatMap((road) =>

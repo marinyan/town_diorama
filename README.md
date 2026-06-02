@@ -64,7 +64,7 @@ The mock ambience state lives in `src/ambience.ts` and starts as:
 
 Weather now has a `Live Shinjuku` mode in the UI. It calls Open-Meteo with Shinjuku coordinates and maps `weather_code`, `precipitation`, `cloud_cover`, `temperature_2m`, and `wind_speed_10m` back into the same mock ambience state. The current adapter lives in `src/weatherApi.ts`.
 
-Rain, drizzle, thunderstorms, and snow follow the live precipitation value: heavier precipitation increases particle count, opacity, fall speed, wet-road reflection for wet modes, and umbrella ratio. Wind speed affects rain streak angle, rain drift, thunderstorm squalls, and snowflake drift. Fog mode tightens the scene fog; thunderstorm mode adds occasional lightning flashes.
+Rain, drizzle, thunderstorms, and snow follow the live precipitation value: heavier precipitation increases particle count, opacity, fall speed, wet-road reflection for wet modes, and umbrella ratio. Snowfall and snow depth are also read when available; snowfall drives snow particles, while snow depth adds subtle snow cover to the ground and rooftops. Wind speed affects rain streak angle, rain drift, thunderstorm squalls, and snowflake drift. Fog mode tightens the scene fog; thunderstorm mode adds occasional lightning flashes.
 
 Time also has a `Now` mode that follows the browser's current clock. A future holiday API can update `isHoliday`, and a location picker can swap the fixed Shinjuku coordinates for any other city without changing the scene components.
 

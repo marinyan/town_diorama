@@ -5,6 +5,8 @@ type OpenMeteoCurrent = {
     temperature_2m?: number;
     weather_code?: number;
     precipitation?: number;
+    snowfall?: number;
+    snow_depth?: number;
     cloud_cover?: number;
     wind_speed_10m?: number;
   };
@@ -16,6 +18,8 @@ export type LiveWeatherResult = {
   weatherCode: number;
   cloudCover: number;
   precipitation: number;
+  snowfallCm: number;
+  snowDepthCm: number;
   windSpeedKmh: number;
   fetchedAt: string;
 };
@@ -40,7 +44,7 @@ export async function fetchShinjukuWeather(signal?: AbortSignal): Promise<LiveWe
   const params = new URLSearchParams({
     latitude: String(SHINJUKU.latitude),
     longitude: String(SHINJUKU.longitude),
-    current: 'temperature_2m,weather_code,precipitation,cloud_cover,wind_speed_10m',
+    current: 'temperature_2m,weather_code,precipitation,snowfall,snow_depth,cloud_cover,wind_speed_10m',
     timezone: 'Asia/Tokyo',
   });
   const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, { signal });
@@ -55,6 +59,8 @@ export async function fetchShinjukuWeather(signal?: AbortSignal): Promise<LiveWe
   }
 
   const precipitation = current.precipitation ?? 0;
+  const snowfallCm = current.snowfall ?? 0;
+  const snowDepthCm = current.snow_depth ?? 0;
   const cloudCover = current.cloud_cover ?? 0;
   const weatherCode = current.weather_code;
   const windSpeedKmh = current.wind_speed_10m ?? 0;
@@ -65,6 +71,8 @@ export async function fetchShinjukuWeather(signal?: AbortSignal): Promise<LiveWe
     weatherCode,
     cloudCover,
     precipitation,
+    snowfallCm,
+    snowDepthCm,
     windSpeedKmh,
     fetchedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
   };
