@@ -1,7 +1,7 @@
 import { OrthographicCamera, Stars } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Group, PointLight, Vector3 } from 'three';
+import { Group, OrthographicCamera as ThreeOrthographicCamera, PointLight, Vector3 } from 'three';
 import { Ambience } from '../ambience';
 import { CityLayout, createCityLayout } from '../cityData';
 import { createCityLayoutFromOsm } from '../map/createLayoutFromOsm';
@@ -20,10 +20,21 @@ type DioramaSceneProps = {
 };
 
 function CameraRig({ onCompassAngleChange, paused }: { onCompassAngleChange?: (angle: number) => void; paused: boolean }) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
   const angle = useRef(0.76);
   const lastReportedAngle = useRef(-1);
   const target = useMemo(() => new Vector3(0, 1.8, 0), []);
+  const zoom = useMemo(() => {
+    const shortEdge = Math.max(1, Math.min(size.width, size.height));
+    return Math.min(42, Math.max(22, 25 * (shortEdge / 980)));
+  }, [size.height, size.width]);
+
+  useEffect(() => {
+    if (camera instanceof ThreeOrthographicCamera) {
+      camera.zoom = zoom;
+      camera.updateProjectionMatrix();
+    }
+  }, [camera, zoom]);
 
   useFrame((_, delta) => {
     if (!paused) angle.current += delta * 0.035;
