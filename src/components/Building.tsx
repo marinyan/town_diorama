@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { Color, DoubleSide, ExtrudeGeometry, InstancedBufferAttribute, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
+import { DoubleSide, ExtrudeGeometry, InstancedBufferAttribute, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
@@ -13,9 +13,74 @@ type BuildingProps = {
   ambience: Ambience;
 };
 
+type WindowSlot = {
+  x: number;
+  y: number;
+  z: number;
+  ry: number;
+  sx: number;
+  sy: number;
+  threshold: number;
+  warmth: number;
+};
+
 function smoothstep(edge0: number, edge1: number, value: number) {
   const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
+}
+
+function createWindowMaterial(color: string) {
+  const material = new MeshBasicMaterial({
+    color,
+    opacity: 0.9,
+    transparent: true,
+    depthWrite: false,
+    side: DoubleSide,
+  });
+  material.onBeforeCompile = (shader) => {
+    shader.vertexShader = [
+      'attribute float instanceAlpha;',
+      'varying float vInstanceAlpha;',
+      shader.vertexShader.replace('#include <begin_vertex>', 'vInstanceAlpha = instanceAlpha;\n#include <begin_vertex>'),
+    ].join('\n');
+    shader.fragmentShader = [
+      'varying float vInstanceAlpha;',
+      shader.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a *= vInstanceAlpha;\n#include <alphatest_fragment>'),
+    ].join('\n');
+  };
+  return material;
+}
+
+function WindowLayer({ ambience, color, slots }: { ambience: Ambience; color: string; slots: WindowSlot[] }) {
+  const windowRef = useRef<InstancedMesh>(null);
+  const dummy = useMemo(() => new Object3D(), []);
+  const geometry = useMemo(() => {
+    const plane = new PlaneGeometry(1, 1);
+    plane.setAttribute('instanceAlpha', new InstancedBufferAttribute(new Float32Array(slots.length), 1));
+    return plane;
+  }, [slots.length]);
+  const material = useMemo(() => createWindowMaterial(color), [color]);
+
+  useLayoutEffect(() => {
+    const mesh = windowRef.current;
+    if (!mesh) return;
+    const alphaAttribute = geometry.getAttribute('instanceAlpha') as InstancedBufferAttribute;
+    const activeProbability = Math.max(0.04, Math.min(0.78, ambience.windowLightProbability));
+    slots.forEach((window, index) => {
+      const glow = smoothstep(window.threshold - 0.12, window.threshold + 0.08, activeProbability);
+      dummy.position.set(window.x, window.y, window.z);
+      dummy.rotation.set(0, window.ry, 0);
+      dummy.scale.set(window.sx, window.sy, 1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(index, dummy.matrix);
+      alphaAttribute.setX(index, glow);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    alphaAttribute.needsUpdate = true;
+  }, [ambience.windowLightProbability, dummy, geometry, slots]);
+
+  if (slots.length === 0) return null;
+  return <instancedMesh ref={windowRef} args={[geometry, material, slots.length]} renderOrder={2} />;
 }
 
 export function Building({ building, ambience }: BuildingProps) {
@@ -66,7 +131,7 @@ export function Building({ building, ambience }: BuildingProps) {
   }, [building.footprint, h, usesFootprint]);
   const windowSlots = useMemo(() => {
     const random = createRandom(building.windowSeed);
-    const windows: Array<{ x: number; y: number; z: number; ry: number; sx: number; sy: number; threshold: number; warmth: number }> = [];
+    const windows: WindowSlot[] = [];
     const rows = Math.max(2, Math.floor(h / 1.05));
     const addWindow = (wx: number, wy: number, wz: number, ry: number) => {
       if (!random.chance(0.78)) return;
@@ -135,62 +200,14 @@ export function Building({ building, ambience }: BuildingProps) {
     }
     return windows;
   }, [building.footprint, building.windowSeed, d, h, usesFootprint, w]);
-
-  const windowRef = useRef<InstancedMesh>(null);
-  const dummy = useMemo(() => new Object3D(), []);
-  const windowColor = useMemo(() => new Color(), []);
-  const windowGeometry = useMemo(() => {
-    const geometry = new PlaneGeometry(1, 1);
-    geometry.setAttribute('instanceAlpha', new InstancedBufferAttribute(new Float32Array(windowSlots.length), 1));
-    return geometry;
-  }, [windowSlots.length]);
-  const windowMaterial = useMemo(
-    () => {
-      const material = new MeshBasicMaterial({
-        color: '#ffffff',
-        opacity: 0.9,
-        transparent: true,
-        depthWrite: false,
-        side: DoubleSide,
-        vertexColors: true,
-      });
-      material.onBeforeCompile = (shader) => {
-        shader.vertexShader = [
-          'attribute float instanceAlpha;',
-          'varying float vInstanceAlpha;',
-          shader.vertexShader.replace('#include <begin_vertex>', 'vInstanceAlpha = instanceAlpha;\n#include <begin_vertex>'),
-        ].join('\n');
-        shader.fragmentShader = [
-          'varying float vInstanceAlpha;',
-          shader.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a *= vInstanceAlpha;\n#include <alphatest_fragment>'),
-        ].join('\n');
-      };
-      return material;
-    },
-    [],
+  const windowLayers = useMemo(
+    () => [
+      { color: '#fff1c6', slots: windowSlots.filter((window) => window.warmth < 0.34) },
+      { color: '#ffe0a4', slots: windowSlots.filter((window) => window.warmth >= 0.34 && window.warmth < 0.72) },
+      { color: '#ffd28f', slots: windowSlots.filter((window) => window.warmth >= 0.72) },
+    ],
+    [windowSlots],
   );
-
-  useLayoutEffect(() => {
-    const mesh = windowRef.current;
-    if (!mesh) return;
-    const alphaAttribute = windowGeometry.getAttribute('instanceAlpha') as InstancedBufferAttribute;
-    const activeProbability = Math.max(0.04, Math.min(0.78, ambience.windowLightProbability));
-    windowSlots.forEach((window, index) => {
-      const glow = smoothstep(window.threshold - 0.12, window.threshold + 0.08, activeProbability);
-      dummy.position.set(window.x, window.y, window.z);
-      dummy.rotation.set(0, window.ry, 0);
-      dummy.scale.set(window.sx, window.sy, 1);
-      dummy.updateMatrix();
-      mesh.setMatrixAt(index, dummy.matrix);
-      alphaAttribute.setX(index, glow);
-      const warmth = 0.18 + window.warmth * 0.22;
-      windowColor.setRGB(1, 0.78 + warmth * 0.34, 0.48 + warmth * 0.42);
-      mesh.setColorAt(index, windowColor);
-    });
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    alphaAttribute.needsUpdate = true;
-  }, [ambience.windowLightProbability, dummy, windowColor, windowGeometry, windowSlots]);
 
   return (
     <group position={[x, y, z]}>
@@ -212,9 +229,9 @@ export function Building({ building, ambience }: BuildingProps) {
           </mesh>
         </>
       )}
-      {windowSlots.length > 0 ? (
-        <instancedMesh ref={windowRef} args={[windowGeometry, windowMaterial, windowSlots.length]} renderOrder={2} />
-      ) : null}
+      {windowLayers.map((layer) => (
+        <WindowLayer key={layer.color} ambience={ambience} color={layer.color} slots={layer.slots} />
+      ))}
       {!usesFootprint &&
         building.signSides.map((side, index) => (
           <Sign key={`${building.id}-sign-${side}-${index}`} side={side} buildingSize={building.size} ambience={ambience} index={index} />
