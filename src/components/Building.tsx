@@ -35,8 +35,8 @@ export function Building({ building, ambience }: BuildingProps) {
           offset: random.range(-sideSpan * 0.32, sideSpan * 0.32),
           y: random.range(-h * 0.28, h * 0.24),
           height: random.range(0.85, Math.min(1.9, h * 0.42)),
-          width: random.range(0.22, 0.42),
-          protrude: random.range(0.55, 1.05),
+          width: random.range(0.12, 0.22),
+          protrude: random.range(0.42, 0.72),
           color: random.pick(palette),
         });
       }

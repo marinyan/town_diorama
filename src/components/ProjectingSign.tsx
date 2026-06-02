@@ -31,9 +31,9 @@ export function ProjectingSign({ buildingSize, ambience, spec }: ProjectingSignP
     isNorth || isSouth
       ? [spec.offset, spec.y, isNorth ? d / 2 + 0.08 : -d / 2 - 0.08]
       : [isEast ? w / 2 + 0.08 : -w / 2 - 0.08, spec.y, spec.offset];
-  const bracketSize: [number, number, number] = isNorth || isSouth ? [0.08, spec.height * 0.82, 0.16] : [0.16, spec.height * 0.82, 0.08];
+  const bracketSize: [number, number, number] = isNorth || isSouth ? [0.045, spec.height * 0.78, 0.08] : [0.08, spec.height * 0.78, 0.045];
   const lineSize: [number, number, number] =
-    isNorth || isSouth ? [spec.width * 0.68, 0.055, spec.protrude + 0.018] : [spec.protrude + 0.018, 0.055, spec.width * 0.68];
+    isNorth || isSouth ? [spec.width * 0.72, 0.035, spec.protrude + 0.01] : [spec.protrude + 0.01, 0.035, spec.width * 0.72];
 
   return (
     <group>
