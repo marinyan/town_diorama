@@ -96,7 +96,7 @@ export function createCityLayout(seed = 1984): CityLayout {
     for (const x of blockXs) {
       const width = random.range(4.2, 6.6);
       const depth = random.range(4, 6.2);
-      const height = random.range(2.3, Math.abs(z) < 8 ? 8.5 : 11.5);
+      const height = random.range(1.8, Math.abs(z) < 8 ? 5.8 : 7.2);
       const palette = ['#6f7372', '#7b746d', '#5f6770', '#807b72', '#68736e'];
       const roofPalette = ['#3f4648', '#46413f', '#38424a', '#4a4a42'];
       const signSides: BuildingData['signSides'] = [];

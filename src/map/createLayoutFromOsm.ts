@@ -92,9 +92,9 @@ function isNode(element: { type: string }): element is OsmNode {
 function parseHeight(tags: Record<string, string> | undefined, fallback: number) {
   if (!tags) return fallback;
   const height = tags.height?.replace(/[^\d.]/g, '');
-  if (height) return Math.min(18, Math.max(1.8, Number(height) / 4));
+  if (height) return Math.min(9.5, Math.max(1.4, Number(height) / 6.2));
   const levels = tags['building:levels'];
-  if (levels) return Math.min(18, Math.max(1.8, Number(levels) * 0.85));
+  if (levels) return Math.min(9.5, Math.max(1.4, Number(levels) * 0.58));
   return fallback;
 }
 
@@ -239,7 +239,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
       const w = maxX - minX;
       const d = maxZ - minZ;
       if (w < 0.45 || d < 0.45 || w > 12 || d > 12) continue;
-      const fallbackHeight = random.range(2.2, way.tags.building === 'apartments' || way.tags.building === 'commercial' ? 10 : 7);
+      const fallbackHeight = random.range(1.7, way.tags.building === 'apartments' || way.tags.building === 'commercial' ? 5.8 : 4.6);
       const h = parseHeight(way.tags, fallbackHeight);
       const x = (minX + maxX) / 2;
       const z = (minZ + maxZ) / 2;
