@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { DoubleSide, ExtrudeGeometry, InstancedBufferAttribute, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
+import { Color, DoubleSide, ExtrudeGeometry, InstancedBufferAttribute, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
@@ -66,12 +66,21 @@ export function Building({ building, ambience }: BuildingProps) {
   }, [building.footprint, h, usesFootprint]);
   const windowSlots = useMemo(() => {
     const random = createRandom(building.windowSeed);
-    const windows: Array<{ x: number; y: number; z: number; ry: number; sx: number; sy: number; threshold: number }> = [];
+    const windows: Array<{ x: number; y: number; z: number; ry: number; sx: number; sy: number; threshold: number; warmth: number }> = [];
     const rows = Math.max(2, Math.floor(h / 1.05));
     const addWindow = (wx: number, wy: number, wz: number, ry: number) => {
       if (!random.chance(0.78)) return;
       const threshold = Math.pow(random.next(), 1.35);
-      windows.push({ x: wx, y: wy, z: wz, ry, sx: random.range(0.2, 0.32), sy: random.range(0.22, 0.34), threshold });
+      windows.push({
+        x: wx,
+        y: wy,
+        z: wz,
+        ry,
+        sx: random.range(0.2, 0.32),
+        sy: random.range(0.22, 0.34),
+        threshold,
+        warmth: random.next(),
+      });
     };
 
     if (usesFootprint && building.footprint) {
@@ -129,6 +138,7 @@ export function Building({ building, ambience }: BuildingProps) {
 
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
+  const windowColor = useMemo(() => new Color(), []);
   const windowGeometry = useMemo(() => {
     const geometry = new PlaneGeometry(1, 1);
     geometry.setAttribute('instanceAlpha', new InstancedBufferAttribute(new Float32Array(windowSlots.length), 1));
@@ -137,11 +147,12 @@ export function Building({ building, ambience }: BuildingProps) {
   const windowMaterial = useMemo(
     () => {
       const material = new MeshBasicMaterial({
-        color: '#ffe2a6',
+        color: '#ffffff',
         opacity: 0.9,
         transparent: true,
         depthWrite: false,
         side: DoubleSide,
+        vertexColors: true,
       });
       material.onBeforeCompile = (shader) => {
         shader.vertexShader = [
@@ -172,10 +183,14 @@ export function Building({ building, ambience }: BuildingProps) {
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
       alphaAttribute.setX(index, glow);
+      const warmth = 0.18 + window.warmth * 0.22;
+      windowColor.setRGB(1, 0.78 + warmth * 0.34, 0.48 + warmth * 0.42);
+      mesh.setColorAt(index, windowColor);
     });
     mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     alphaAttribute.needsUpdate = true;
-  }, [ambience.windowLightProbability, dummy, windowGeometry, windowSlots]);
+  }, [ambience.windowLightProbability, dummy, windowColor, windowGeometry, windowSlots]);
 
   return (
     <group position={[x, y, z]}>
