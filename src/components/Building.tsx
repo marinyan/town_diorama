@@ -59,14 +59,14 @@ export function Building({ building, ambience }: BuildingProps) {
     geometry.computeVertexNormals();
     return geometry;
   }, [building.footprint, h, usesFootprint]);
-  const litWindows = useMemo(() => {
+  const windowSlots = useMemo(() => {
     const random = createRandom(building.windowSeed);
-    const windows: Array<{ x: number; y: number; z: number; ry: number; sx: number; sy: number }> = [];
+    const windows: Array<{ x: number; y: number; z: number; ry: number; sx: number; sy: number; threshold: number }> = [];
     const rows = Math.max(2, Math.floor(h / 1.05));
     const addWindow = (wx: number, wy: number, wz: number, ry: number) => {
-      if (random.chance(0.68)) {
-        windows.push({ x: wx, y: wy, z: wz, ry, sx: random.range(0.22, 0.34), sy: random.range(0.24, 0.36) });
-      }
+      if (!random.chance(0.78)) return;
+      const threshold = Math.pow(random.next(), 1.35);
+      windows.push({ x: wx, y: wy, z: wz, ry, sx: random.range(0.2, 0.32), sy: random.range(0.22, 0.34), threshold });
     };
 
     if (usesFootprint && building.footprint) {
@@ -129,7 +129,7 @@ export function Building({ building, ambience }: BuildingProps) {
     () =>
       new MeshBasicMaterial({
         color: '#ffe2a6',
-        opacity: 0.82,
+        opacity: 0.86,
         transparent: true,
         depthWrite: false,
         side: DoubleSide,
@@ -138,22 +138,24 @@ export function Building({ building, ambience }: BuildingProps) {
   );
 
   useLayoutEffect(() => {
-    windowMaterial.opacity = 0.48 + ambience.windowLightProbability * 0.52;
+    windowMaterial.opacity = 0.72 + ambience.windowLightProbability * 0.22;
     windowMaterial.needsUpdate = true;
   }, [ambience.windowLightProbability, windowMaterial]);
 
   useLayoutEffect(() => {
     const mesh = windowRef.current;
     if (!mesh) return;
-    litWindows.forEach((window, index) => {
-      dummy.position.set(window.x, window.y, window.z);
+    const activeProbability = Math.max(0.04, Math.min(0.78, ambience.windowLightProbability));
+    windowSlots.forEach((window, index) => {
+      const isLit = window.threshold <= activeProbability;
+      dummy.position.set(window.x, isLit ? window.y : -80, window.z);
       dummy.rotation.set(0, window.ry, 0);
-      dummy.scale.set(window.sx, window.sy, 1);
+      dummy.scale.set(isLit ? window.sx : 0.001, isLit ? window.sy : 0.001, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
     });
     mesh.instanceMatrix.needsUpdate = true;
-  }, [dummy, litWindows]);
+  }, [ambience.windowLightProbability, dummy, windowSlots]);
 
   return (
     <group position={[x, y, z]}>
@@ -175,8 +177,8 @@ export function Building({ building, ambience }: BuildingProps) {
           </mesh>
         </>
       )}
-      {litWindows.length > 0 ? (
-        <instancedMesh ref={windowRef} args={[windowGeometry, windowMaterial, litWindows.length]} renderOrder={2} />
+      {windowSlots.length > 0 ? (
+        <instancedMesh ref={windowRef} args={[windowGeometry, windowMaterial, windowSlots.length]} renderOrder={2} />
       ) : null}
       {!usesFootprint &&
         building.signSides.map((side, index) => (
