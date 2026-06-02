@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { DoubleSide, ExtrudeGeometry, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
+import { Color, DoubleSide, ExtrudeGeometry, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
@@ -12,6 +12,11 @@ type BuildingProps = {
   building: BuildingData;
   ambience: Ambience;
 };
+
+function smoothstep(edge0: number, edge1: number, value: number) {
+  const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
 
 export function Building({ building, ambience }: BuildingProps) {
   const [x, y, z] = building.position;
@@ -124,38 +129,40 @@ export function Building({ building, ambience }: BuildingProps) {
 
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
+  const windowColor = useMemo(() => new Color(), []);
   const windowGeometry = useMemo(() => new PlaneGeometry(1, 1), []);
   const windowMaterial = useMemo(
     () =>
       new MeshBasicMaterial({
-        color: '#ffe2a6',
-        opacity: 0.86,
+        color: '#ffffff',
+        opacity: 0.92,
         transparent: true,
         depthWrite: false,
         side: DoubleSide,
+        vertexColors: true,
       }),
     [],
   );
-
-  useLayoutEffect(() => {
-    windowMaterial.opacity = 0.72 + ambience.windowLightProbability * 0.22;
-    windowMaterial.needsUpdate = true;
-  }, [ambience.windowLightProbability, windowMaterial]);
 
   useLayoutEffect(() => {
     const mesh = windowRef.current;
     if (!mesh) return;
     const activeProbability = Math.max(0.04, Math.min(0.78, ambience.windowLightProbability));
     windowSlots.forEach((window, index) => {
-      const isLit = window.threshold <= activeProbability;
-      dummy.position.set(window.x, isLit ? window.y : -80, window.z);
+      const glow = smoothstep(window.threshold - 0.12, window.threshold + 0.08, activeProbability);
+      const idleGlow = 0.025;
+      const intensity = idleGlow + glow * (0.78 + ambience.signEmissiveIntensity * 0.08);
+      dummy.position.set(window.x, window.y, window.z);
       dummy.rotation.set(0, window.ry, 0);
-      dummy.scale.set(isLit ? window.sx : 0.001, isLit ? window.sy : 0.001, 1);
+      dummy.scale.set(window.sx, window.sy, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
+      windowColor.setRGB(1 * intensity, 0.78 * intensity, 0.38 * intensity);
+      mesh.setColorAt(index, windowColor);
     });
     mesh.instanceMatrix.needsUpdate = true;
-  }, [ambience.windowLightProbability, dummy, windowSlots]);
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }, [ambience.signEmissiveIntensity, ambience.windowLightProbability, dummy, windowColor, windowSlots]);
 
   return (
     <group position={[x, y, z]}>

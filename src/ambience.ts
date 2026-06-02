@@ -183,7 +183,7 @@ export function blendAmbience(from: Ambience, to: Ambience, t: number): Ambience
     fogColor: lerpColor(from.fogColor, to.fogColor, eased),
     sunlightIntensity: lerpNumber(from.sunlightIntensity, to.sunlightIntensity, eased),
     signEmissiveIntensity: lerpNumber(from.signEmissiveIntensity, to.signEmissiveIntensity, eased),
-    windowLightProbability: to.windowLightProbability,
+    windowLightProbability: lerpNumber(from.windowLightProbability, to.windowLightProbability, eased),
     pedestrianDensity: lerpNumber(from.pedestrianDensity, to.pedestrianDensity, eased),
     nightlifeDensity: lerpNumber(from.nightlifeDensity, to.nightlifeDensity, eased),
     umbrellaRatio: lerpNumber(from.umbrellaRatio, to.umbrellaRatio, eased),
