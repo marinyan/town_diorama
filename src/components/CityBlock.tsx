@@ -15,12 +15,14 @@ const roadXs = [-27, -18, -9, 0, 9, 18, 27];
 const roadZs = [-24, -15, -5, 5, 15, 24];
 const fieldSize = { width: 72, depth: 62 };
 const terrainResolution = { columns: 45, rows: 39 };
+const terrainBaseY = -0.3;
 
 function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
-  const geometry = useMemo(() => {
+  const terrainGeometry = useMemo(() => {
     if (!grid) return null;
     const vertices: number[] = [];
     const indices: number[] = [];
+    const terrainY = (x: number, z: number) => sampleElevationUnits(grid, x, z) - 0.12;
 
     // Render a full diorama base, not just the OSM bbox. Samples outside the
     // fetched bbox clamp to its edge height, which keeps the plinth continuous.
@@ -28,7 +30,7 @@ function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
       const z = -fieldSize.depth / 2 + (row / (terrainResolution.rows - 1)) * fieldSize.depth;
       for (let column = 0; column < terrainResolution.columns; column++) {
         const x = -fieldSize.width / 2 + (column / (terrainResolution.columns - 1)) * fieldSize.width;
-        vertices.push(x, sampleElevationUnits(grid, x, z) - 0.12, z);
+        vertices.push(x, terrainY(x, z), z);
       }
     }
 
@@ -48,12 +50,45 @@ function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
     terrain.computeVertexNormals();
     return terrain;
   }, [grid]);
+  const skirtGeometry = useMemo(() => {
+    if (!grid) return null;
+    const vertices: number[] = [];
+    const indices: number[] = [];
+    const terrainY = (x: number, z: number) => sampleElevationUnits(grid, x, z) - 0.12;
+    const addEdge = (points: Array<[number, number]>) => {
+      const offset = vertices.length / 3;
+      points.forEach(([x, z]) => {
+        vertices.push(x, terrainY(x, z), z, x, terrainBaseY, z);
+      });
+      for (let index = 0; index < points.length - 1; index++) {
+        const a = offset + index * 2;
+        indices.push(a, a + 1, a + 2, a + 2, a + 1, a + 3);
+      }
+    };
+    const west = -fieldSize.width / 2;
+    const east = fieldSize.width / 2;
+    const north = -fieldSize.depth / 2;
+    const south = fieldSize.depth / 2;
+    addEdge(Array.from({ length: terrainResolution.rows }, (_, row) => [west, north + (row / (terrainResolution.rows - 1)) * fieldSize.depth]));
+    addEdge(Array.from({ length: terrainResolution.rows }, (_, row) => [east, north + (row / (terrainResolution.rows - 1)) * fieldSize.depth]));
+    addEdge(Array.from({ length: terrainResolution.columns }, (_, column) => [west + (column / (terrainResolution.columns - 1)) * fieldSize.width, north]));
+    addEdge(Array.from({ length: terrainResolution.columns }, (_, column) => [west + (column / (terrainResolution.columns - 1)) * fieldSize.width, south]));
+
+    const skirt = new BufferGeometry();
+    skirt.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+    skirt.setIndex(indices);
+    skirt.computeVertexNormals();
+    return skirt;
+  }, [grid]);
 
   const material = useMemo(() => new MeshStandardMaterial({ color: '#3b423e', roughness: 0.88 }), []);
-  useEffect(() => () => geometry?.dispose(), [geometry]);
+  const skirtMaterial = useMemo(() => new MeshStandardMaterial({ color: '#535b57', roughness: 0.78 }), []);
+  useEffect(() => () => terrainGeometry?.dispose(), [terrainGeometry]);
+  useEffect(() => () => skirtGeometry?.dispose(), [skirtGeometry]);
   useEffect(() => () => material.dispose(), [material]);
+  useEffect(() => () => skirtMaterial.dispose(), [skirtMaterial]);
 
-  if (!geometry) {
+  if (!terrainGeometry || !skirtGeometry) {
     return (
       <mesh receiveShadow position={[0, -0.08, 0]}>
         <boxGeometry args={[fieldSize.width, 0.15, fieldSize.depth]} />
@@ -62,7 +97,12 @@ function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
     );
   }
 
-  return <mesh receiveShadow geometry={geometry} material={material} />;
+  return (
+    <group>
+      <mesh receiveShadow geometry={terrainGeometry} material={material} />
+      <mesh receiveShadow geometry={skirtGeometry} material={skirtMaterial} />
+    </group>
+  );
 }
 
 export function CityBlock({ layout, ambience }: CityBlockProps) {
@@ -160,27 +200,10 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
         </group>
       ))}
 
-      <mesh position={[-35.6, 0.35, 0]}>
-        <boxGeometry args={[0.45, 0.85, 62]} />
-        <meshStandardMaterial color="#535b57" roughness={0.7} />
-      </mesh>
-      <mesh position={[35.6, 0.35, 0]}>
-        <boxGeometry args={[0.45, 0.85, 62]} />
-        <meshStandardMaterial color="#535b57" roughness={0.7} />
-      </mesh>
-
       {layout.buildings.map((building) => (
         <Building key={building.id} building={building} ambience={ambience} />
       ))}
 
-      <mesh position={[0, 0.13, -31.2]}>
-        <boxGeometry args={[72, 0.18, 0.4]} />
-        <meshStandardMaterial color="#58615d" roughness={0.72} />
-      </mesh>
-      <mesh position={[0, 0.13, 31.2]}>
-        <boxGeometry args={[72, 0.18, 0.4]} />
-        <meshStandardMaterial color="#58615d" roughness={0.72} />
-      </mesh>
     </group>
   );
 }
