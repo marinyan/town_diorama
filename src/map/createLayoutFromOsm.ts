@@ -105,6 +105,34 @@ function roadKind(tags: Record<string, string> | undefined): RoadData['kind'] {
   return 'side';
 }
 
+function parseLayer(tags: Record<string, string> | undefined) {
+  const parsed = Number(tags?.layer ?? 0);
+  return Number.isFinite(parsed) ? Math.max(-2, Math.min(3, parsed)) : 0;
+}
+
+function hasTruthyTag(value: string | undefined) {
+  return value === 'yes' || value === 'true' || value === '1';
+}
+
+function roadElevation(tags: Record<string, string> | undefined) {
+  if (!tags) return 0;
+  const layer = parseLayer(tags);
+  const highway = tags.highway;
+  const isSteps = highway === 'steps';
+  const isBridge = hasTruthyTag(tags.bridge);
+  const isTunnel = hasTruthyTag(tags.tunnel) || tags.covered === 'yes';
+  const incline = tags.incline;
+
+  let elevation = layer * 0.32;
+  if (isBridge) elevation += 0.72;
+  if (isTunnel) elevation -= 0.18;
+  if (isSteps) elevation += 0.28;
+  if (incline === 'up') elevation += 0.2;
+  if (incline === 'down') elevation -= 0.12;
+
+  return Math.max(-0.18, Math.min(1.45, elevation));
+}
+
 export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): CityLayout {
   const random = createRandom(seed);
   const nodes = new Map<number, OsmNode>();
@@ -159,7 +187,10 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
     }
 
     if (way.tags?.highway && points2.length >= 2) {
-      const roadPoints = points2.map((point) => new Vector3(point.x, 0.035, point.y));
+      // OSM rarely gives true street-level terrain height, but structural tags
+      // like steps/bridge/tunnel/layer are enough to imply toy-scale verticality.
+      const elevation = roadElevation(way.tags);
+      const roadPoints = points2.map((point) => new Vector3(point.x, 0.035 + elevation, point.y));
       if (!roadPoints.some(isInsideField) && !roadPoints.some((point, index) => index > 0 && isSegmentNearField(roadPoints[index - 1], point))) {
         continue;
       }
@@ -168,6 +199,8 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
         points: roadPoints,
         width: roadWidth(way.tags),
         kind: roadKind(way.tags),
+        elevation,
+        hasSteps: way.tags.highway === 'steps',
       };
       roads.push(road);
       if (roadPoints.length >= 3 && paths.length < 42) {
@@ -175,7 +208,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
           id: `osm-path-${way.id}`,
           zone: road.kind === 'main' ? 'commute' : road.kind === 'alley' ? 'nightlife' : 'scatter',
           points: roadPoints.map((position, index) => ({
-            position: position.clone().setY(0.08),
+            position: position.clone().setY(0.08 + elevation),
             pause: index === 1 && random.chance(0.35) ? random.range(0.5, 1.6) : 0,
           })),
         });

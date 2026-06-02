@@ -53,16 +53,29 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
               if (length < 0.05) return null;
               if (!withinField(start.x, start.z) && !withinField(end.x, end.z)) return null;
               const angle = Math.atan2(dx, dz);
+              const y = (start.y + end.y) / 2;
+              const treadCount = road.hasSteps ? Math.min(12, Math.max(3, Math.floor(length / 0.5))) : 0;
+              const supportHeight = Math.max(0, y - 0.08);
               return (
-                <mesh
-                  key={`${road.id}-${index}`}
-                  receiveShadow
-                  position={[(start.x + end.x) / 2, 0.025, (start.z + end.z) / 2]}
-                  rotation={[0, angle, 0]}
-                  material={asphalt}
-                >
-                  <boxGeometry args={[road.width, 0.08, length + road.width * 0.4]} />
-                </mesh>
+                <group key={`${road.id}-${index}`} position={[(start.x + end.x) / 2, y, (start.z + end.z) / 2]} rotation={[0, angle, 0]}>
+                  {supportHeight > 0.16 ? (
+                    <mesh position={[0, -supportHeight / 2 - 0.05, 0]} receiveShadow material={curb}>
+                      <boxGeometry args={[road.width * 0.72, supportHeight, length + road.width * 0.18]} />
+                    </mesh>
+                  ) : null}
+                  <mesh receiveShadow material={asphalt}>
+                    <boxGeometry args={[road.width, 0.08, length + road.width * 0.4]} />
+                  </mesh>
+                  {Array.from({ length: treadCount }, (_, treadIndex) => (
+                    <mesh
+                      key={`${road.id}-${index}-step-${treadIndex}`}
+                      position={[0, 0.07, -length / 2 + ((treadIndex + 0.5) / treadCount) * length]}
+                      material={lane}
+                    >
+                      <boxGeometry args={[road.width * 0.86, 0.035, 0.035]} />
+                    </mesh>
+                  ))}
+                </group>
               );
             }),
           )

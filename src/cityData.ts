@@ -31,6 +31,8 @@ export type RoadData = {
   points: Vector3[];
   width: number;
   kind: 'main' | 'side' | 'alley';
+  elevation: number;
+  hasSteps?: boolean;
 };
 
 export type CityLayout = {
