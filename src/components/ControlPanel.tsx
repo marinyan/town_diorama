@@ -69,10 +69,7 @@ export function ControlPanel({
           </p>
         </div>
         <div className="panel-status">
-          <div className="classic-compass" aria-label="Compass" style={{ '--compass-angle': `${compassAngle}rad` } as CSSProperties}>
-            <span className="compass-dot compass-n" />
-            <span className="compass-dot compass-s" />
-          </div>
+          <div className="classic-compass" aria-label="Compass" style={{ '--compass-angle': `${compassAngle}rad` } as CSSProperties} />
           <div className="temp-pill">{mockState.temperatureC}C</div>
         </div>
       </div>

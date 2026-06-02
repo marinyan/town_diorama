@@ -100,26 +100,6 @@ select {
   transition: transform 180ms linear;
 }
 
-.compass-dot {
-  position: absolute;
-  left: 50%;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.compass-n {
-  top: 5px;
-  background: #ff7a72;
-}
-
-.compass-s {
-  bottom: 5px;
-  background: #6bbcff;
-}
-
 .control-grid {
   display: grid;
   gap: 8px;
