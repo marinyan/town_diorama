@@ -26,6 +26,57 @@ function isSegmentNearField(a: Vector3, b: Vector3) {
   );
 }
 
+function perpendicularDistance(point: { x: number; y: number }, start: { x: number; y: number }, end: { x: number; y: number }) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  if (dx === 0 && dy === 0) return Math.hypot(point.x - start.x, point.y - start.y);
+  const t = Math.max(0, Math.min(1, ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(point.x - (start.x + t * dx), point.y - (start.y + t * dy));
+}
+
+function simplifyLine(points: Array<{ x: number; y: number }>, tolerance: number): Array<{ x: number; y: number }> {
+  if (points.length <= 2) return points;
+  const start = points[0];
+  const end = points[points.length - 1];
+  let maxDistance = 0;
+  let splitIndex = 0;
+
+  for (let i = 1; i < points.length - 1; i++) {
+    const distance = perpendicularDistance(points[i], start, end);
+    if (distance > maxDistance) {
+      maxDistance = distance;
+      splitIndex = i;
+    }
+  }
+
+  if (maxDistance <= tolerance) return [start, end];
+
+  const left = simplifyLine(points.slice(0, splitIndex + 1), tolerance);
+  const right = simplifyLine(points.slice(splitIndex), tolerance);
+  return [...left.slice(0, -1), ...right];
+}
+
+function simplifyFootprint(points: Array<[number, number]>) {
+  const open = points.slice();
+  const last = open[open.length - 1];
+  if (last && open.length > 1 && open[0][0] === last[0] && open[0][1] === last[1]) {
+    open.pop();
+  }
+  if (open.length <= 18) return open;
+
+  for (const tolerance of [0.05, 0.1, 0.18, 0.28]) {
+    const simplified = simplifyLine(
+      [...open, open[0]].map(([x, y]) => ({ x, y })),
+      tolerance,
+    )
+      .slice(0, -1)
+      .map((point): [number, number] => [point.x, point.y]);
+    if (simplified.length >= 3 && simplified.length <= 18) return simplified;
+  }
+
+  return null;
+}
+
 function isNode(element: { type: string }): element is OsmNode {
   return element.type === 'node';
 }
@@ -90,11 +141,13 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415): City
       const x = (minX + maxX) / 2;
       const z = (minZ + maxZ) / 2;
       if (Math.abs(x) > fieldLimit.x || Math.abs(z) > fieldLimit.z) continue;
+      const footprint = simplifyFootprint(points2.map((point) => [point.x - x, point.y - z]));
+      if (!footprint) continue;
       buildings.push({
         id: `osm-building-${way.id}`,
         position: [x, h / 2, z],
         size: [Math.max(0.6, w), h, Math.max(0.6, d)],
-        footprint: points2.length <= 12 ? points2.map((point) => [point.x - x, point.y - z]) : undefined,
+        footprint,
         color: random.pick(['#687170', '#746f68', '#606971', '#76786f', '#5d6764']),
         roofColor: random.pick(['#3f4648', '#46413f', '#38424a', '#4a4a42']),
         signSides: random.chance(0.42) ? [random.pick(['north', 'south', 'east', 'west'])] : [],
