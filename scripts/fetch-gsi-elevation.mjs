@@ -1,8 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-const osmPath = resolve('public/data/shinjuku-osm.json');
-const outputPath = resolve('public/data/shinjuku-elevation.json');
+const osmPath = resolve('public/data/gotanda-toc-osm.json');
+const outputPath = resolve('public/data/gotanda-toc-elevation.json');
 const zoom = 15;
 const columns = 33;
 const rows = 33;

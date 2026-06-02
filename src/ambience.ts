@@ -2,7 +2,7 @@ export type WeatherMode = 'clear' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'sno
 export type TimePreset = 'morning' | 'noon' | 'dusk' | 'night' | 'lateNight';
 
 export type MockAmbienceState = {
-  location: 'Shinjuku';
+  location: string;
   localTime: string;
   weather: WeatherMode;
   temperatureC: number;

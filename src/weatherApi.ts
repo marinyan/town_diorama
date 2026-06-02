@@ -24,9 +24,9 @@ export type LiveWeatherResult = {
   fetchedAt: string;
 };
 
-const SHINJUKU = {
-  latitude: 35.6938,
-  longitude: 139.7034,
+const GOTANDA_TOC = {
+  latitude: 35.6242,
+  longitude: 139.7211,
 };
 
 function weatherCodeToMode(code: number, precipitation: number, cloudCover: number): WeatherMode {
@@ -40,10 +40,10 @@ function weatherCodeToMode(code: number, precipitation: number, cloudCover: numb
   return 'cloudy';
 }
 
-export async function fetchShinjukuWeather(signal?: AbortSignal): Promise<LiveWeatherResult> {
+export async function fetchGotandaWeather(signal?: AbortSignal): Promise<LiveWeatherResult> {
   const params = new URLSearchParams({
-    latitude: String(SHINJUKU.latitude),
-    longitude: String(SHINJUKU.longitude),
+    latitude: String(GOTANDA_TOC.latitude),
+    longitude: String(GOTANDA_TOC.longitude),
     current: 'temperature_2m,weather_code,precipitation,snowfall,snow_depth,cloud_cover,wind_speed_10m',
     timezone: 'Asia/Tokyo',
   });

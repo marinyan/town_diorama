@@ -2,13 +2,13 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const bbox = {
-  south: 35.6915,
-  west: 139.7005,
-  north: 35.6945,
-  east: 139.7045,
+  south: 35.6206,
+  west: 139.7176,
+  north: 35.6268,
+  east: 139.7238,
 };
 
-const outputPath = resolve('public/data/shinjuku-osm.json');
+const outputPath = resolve('public/data/gotanda-toc-osm.json');
 
 const query = `
 [out:json][timeout:30];

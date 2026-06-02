@@ -1,6 +1,6 @@
 # Just Watching: Urban Diorama Viewer
 
-A browser-based Vite + React + TypeScript diorama of a dense Shinjuku-like backstreet at dusk. The city is built from procedural Three.js geometry through React Three Fiber and Drei, with tiny retro map icons drifting through alleys, rooftops, stairs, and building entrances.
+A browser-based Vite + React + TypeScript diorama of the dense area between Gotanda Station and the TOC building at dusk. The city is built from procedural Three.js geometry through React Three Fiber and Drei, with tiny retro map icons drifting through alleys, rooftops, stairs, and building entrances.
 
 ## Run
 
@@ -59,7 +59,7 @@ The mock ambience state lives in `src/ambience.ts` and starts as:
 
 ```ts
 {
-  location: 'Shinjuku',
+  location: 'Gotanda / TOC',
   localTime: '18:20',
   weather: 'rain',
   temperatureC: 22,
@@ -70,15 +70,15 @@ The mock ambience state lives in `src/ambience.ts` and starts as:
 
 `getAmbienceFromState` maps that state to sky color, sun intensity, sign and window light levels, crowd density, umbrella icon ratio, wet-road reflection, and an ambient sound mood placeholder.
 
-Weather now has a `Live Shinjuku` mode in the UI. It calls Open-Meteo with Shinjuku coordinates and maps `weather_code`, `precipitation`, `cloud_cover`, `temperature_2m`, and `wind_speed_10m` back into the same mock ambience state. The current adapter lives in `src/weatherApi.ts`.
+Weather now has a `Live Gotanda` mode in the UI. It calls Open-Meteo with coordinates centered between Gotanda Station and the TOC building, then maps `weather_code`, `precipitation`, `cloud_cover`, `temperature_2m`, and `wind_speed_10m` back into the same mock ambience state. The current adapter lives in `src/weatherApi.ts`.
 
 Rain, drizzle, thunderstorms, and snow follow the live precipitation value: heavier precipitation increases particle count, opacity, fall speed, wet-road reflection for wet modes, and umbrella ratio. Snowfall and snow depth are also read when available; snowfall drives snow particles, while snow depth adds subtle snow cover to the ground and rooftops. Wind speed affects rain streak angle, rain drift, thunderstorm squalls, and snowflake drift. Fog mode tightens the scene fog; thunderstorm mode adds occasional lightning flashes.
 
-Time also has a `Now` mode that follows the browser's current clock. A future holiday API can update `isHoliday`, and a location picker can swap the fixed Shinjuku coordinates for any other city without changing the scene components.
+Time also has a `Now` mode that follows the browser's current clock. A future holiday API can update `isHoliday`, and a location picker can swap the fixed Gotanda coordinates for any other city without changing the scene components.
 
 ## OSM Map Data
 
-The scene first tries to load `public/data/shinjuku-osm.json`, which contains OpenStreetMap road and building data fetched through Overpass API. If that file is missing, the app falls back to the deterministic procedural layout.
+The scene first tries to load `public/data/gotanda-toc-osm.json`, which contains OpenStreetMap road and building data fetched through Overpass API. If that file is missing, the app falls back to the deterministic procedural layout.
 
 Refresh the local OSM sample with:
 
@@ -90,7 +90,7 @@ The converter in `src/map/createLayoutFromOsm.ts` projects latitude/longitude in
 
 ## Embedded Elevation Data
 
-The scene also loads `public/data/shinjuku-elevation.json` when present. This file is generated from Geospatial Information Authority of Japan elevation tiles and stores a compact relative-height grid for the same Shinjuku bbox as the OSM sample.
+The scene also loads `public/data/gotanda-toc-elevation.json` when present. This file is generated from Geospatial Information Authority of Japan elevation tiles and stores a compact relative-height grid for the same Gotanda/TOC bbox as the OSM sample.
 
 Refresh the local elevation sample with:
 

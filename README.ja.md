@@ -1,6 +1,6 @@
 # Just Watching: Urban Diorama Viewer
 
-新宿周辺の裏路地を、上から静かに眺めるためのブラウザベース都市ジオラマです。
+五反田駅とTOCビルの中間あたりを、上から静かに眺めるためのブラウザベース都市ジオラマです。
 Vite + React + TypeScript + React Three Fiber で作られており、OpenStreetMap 由来の道路・建物データ、国土地理院の標高タイル由来の組み込み標高データ、手続き的な低ポリ表現を組み合わせています。
 
 目的やゲーム性はありません。小さな青いフィールドマップ風アイコンが街を流れ、時間帯・天気・降水量・風速によって雰囲気が変わります。
@@ -66,12 +66,12 @@ Electron版はフルスクリーン/kiosk風に起動します。`Esc` または
 
 - カメラ自動オービットの一時停止/再開
 - 時間帯: `Now`, `Morning`, `Noon`, `Dusk`, `Night`, `Late`
-- 天気: `Live Shinjuku`, `Clear`, `Cloudy`, `Fog`, `Drizzle`, `Rain`, `Snow`, `Storm`
+- 天気: `Live Gotanda`, `Clear`, `Cloudy`, `Fog`, `Drizzle`, `Rain`, `Snow`, `Storm`
 - 群衆表示
 - 降水表示
 
 `Now` はブラウザ/PCの現在時刻に追随します。
-`Live Shinjuku` は Open-Meteo から新宿付近の現在天気を取得します。
+`Live Gotanda` は Open-Meteo から五反田駅とTOCビルの中間付近の現在天気を取得します。
 
 ## 天気と時間
 
@@ -92,7 +92,7 @@ Live Weather では Open-Meteo API を使っています。
 
 ## OSM地図データ
 
-アプリはまず `public/data/shinjuku-osm.json` を読み込みます。
+アプリはまず `public/data/gotanda-toc-osm.json` を読み込みます。
 このファイルには Overpass API から取得した OpenStreetMap の道路・建物データが入っています。
 ファイルがない場合は、決定的乱数による手続き生成レイアウトにフォールバックします。
 
@@ -106,8 +106,8 @@ node scripts/fetch-osm.mjs
 
 ## 組み込み標高データ
 
-アプリは `public/data/shinjuku-elevation.json` がある場合、国土地理院の標高タイルから生成した相対標高グリッドを読み込みます。
-この標高グリッドは OSM サンプルと同じ新宿 bbox を対象にしており、建物の基礎、道路、人の経路に同じ高さとして反映されます。
+アプリは `public/data/gotanda-toc-elevation.json` がある場合、国土地理院の標高タイルから生成した相対標高グリッドを読み込みます。
+この標高グリッドは OSM サンプルと同じ五反田/TOC bbox を対象にしており、建物の基礎、道路、人の経路に同じ高さとして反映されます。
 
 標高サンプルを再取得する場合:
 

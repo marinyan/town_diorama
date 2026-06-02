@@ -5,7 +5,7 @@ import { ControlPanel } from './components/ControlPanel';
 import { DioramaScene } from './components/DioramaScene';
 import { getAmbienceFromState, MockAmbienceState, TimePreset, WeatherMode } from './ambience';
 import { AmbienceTransitionSpeed, useTransitionedAmbience } from './useTransitionedAmbience';
-import { fetchShinjukuWeather } from './weatherApi';
+import { fetchGotandaWeather } from './weatherApi';
 
 type TimeMode = TimePreset | 'live';
 type WeatherSetting = WeatherMode | 'live';
@@ -24,7 +24,7 @@ const manualWeatherPresets: Record<
 };
 
 const initialState: MockAmbienceState = {
-  location: 'Shinjuku',
+  location: 'Gotanda / TOC',
   localTime: '18:20',
   weather: 'rain',
   temperatureC: 22,
@@ -40,7 +40,7 @@ export default function App() {
   const [mockState, setMockState] = useState<MockAmbienceState>(initialState);
   const [timeMode, setTimeMode] = useState<TimeMode>('live');
   const [weatherSetting, setWeatherSetting] = useState<WeatherSetting>('live');
-  const [weatherStatus, setWeatherStatus] = useState('syncing Shinjuku weather...');
+  const [weatherStatus, setWeatherStatus] = useState('syncing Gotanda weather...');
   const [orbitPaused, setOrbitPaused] = useState(false);
   const [crowdVisible, setCrowdVisible] = useState(true);
   const [rainEnabled, setRainEnabled] = useState(true);
@@ -90,7 +90,7 @@ export default function App() {
 
     const syncWeather = async () => {
       try {
-        const result = await fetchShinjukuWeather(controller.signal);
+        const result = await fetchGotandaWeather(controller.signal);
         if (!active || weatherSettingRef.current !== 'live') return;
         setTransitionSpeed('slow');
         setMockState((state) => ({
@@ -132,7 +132,7 @@ export default function App() {
     setWeatherSetting(weather);
     if (weather === 'live') {
       setTransitionSpeed('slow');
-      setWeatherStatus('syncing Shinjuku weather...');
+      setWeatherStatus('syncing Gotanda weather...');
       return;
     }
     setTransitionSpeed('fast');
