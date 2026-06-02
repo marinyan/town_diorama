@@ -22,25 +22,23 @@ export function Building({ building, ambience }: BuildingProps) {
     const random = createRandom(building.windowSeed + 1205);
     const palette = ['#f25f5c', '#4db3df', '#f2c14e', '#70c878', '#f08ac0', '#fff0a8'];
     const sideChoices: SignSide[] = ['north', 'south', 'east', 'west'];
-    const preferredSides = building.signSides.length > 0 ? building.signSides : [random.pick(sideChoices)];
+    const side = building.signSides.length > 0 ? random.pick(building.signSides) : random.pick(sideChoices);
     const specs: ProjectingSignSpec[] = [];
 
-    preferredSides.forEach((side) => {
-      if (!random.chance(usesFootprint ? 0.82 : 0.58)) return;
-      const sideSpan = side === 'north' || side === 'south' ? w : d;
-      const count = random.chance(h < 5.2 ? 0.55 : 0.22) ? 2 : 1;
-      for (let i = 0; i < count; i++) {
-        specs.push({
-          side,
-          offset: random.range(-sideSpan * 0.32, sideSpan * 0.32),
-          y: random.range(-h * 0.28, h * 0.24),
-          height: random.range(0.85, Math.min(1.9, h * 0.42)),
-          width: random.range(0.12, 0.22),
-          protrude: random.range(0.42, 0.72),
-          color: random.pick(palette),
-        });
-      }
-    });
+    if (!random.chance(usesFootprint ? 0.82 : 0.58)) return specs;
+    const sideSpan = side === 'north' || side === 'south' ? w : d;
+    const count = random.chance(h < 5.2 ? 0.55 : 0.22) ? 2 : 1;
+    for (let i = 0; i < count; i++) {
+      specs.push({
+        side,
+        offset: random.range(-sideSpan * 0.32, sideSpan * 0.32),
+        y: random.range(-h * 0.28, h * 0.24),
+        height: random.range(0.85, Math.min(1.9, h * 0.42)),
+        width: random.range(0.12, 0.2),
+        protrude: random.range(0.24, 0.42),
+        color: random.pick(palette),
+      });
+    }
 
     return specs.slice(0, 3);
   }, [building.signSides, building.windowSeed, d, h, usesFootprint, w]);
