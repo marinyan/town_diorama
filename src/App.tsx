@@ -72,6 +72,12 @@ export default function App() {
     let active = true;
     const controller = new AbortController();
 
+    let timer: number | undefined;
+    const scheduleNextSync = () => {
+      const jitterMs = Math.random() * 30_000;
+      timer = window.setTimeout(syncWeather, 10 * 60 * 1000 + jitterMs);
+    };
+
     const syncWeather = async () => {
       try {
         const result = await fetchShinjukuWeather(controller.signal);
@@ -92,15 +98,20 @@ export default function App() {
       } catch (error) {
         if (!active) return;
         setWeatherStatus(error instanceof Error ? `live weather unavailable: ${error.message}` : 'live weather unavailable');
+      } finally {
+        if (active && weatherSettingRef.current === 'live') {
+          scheduleNextSync();
+        }
       }
     };
 
     syncWeather();
-    const timer = window.setInterval(syncWeather, 10 * 60 * 1000);
     return () => {
       active = false;
       controller.abort();
-      window.clearInterval(timer);
+      if (timer !== undefined) {
+        window.clearTimeout(timer);
+      }
     };
   }, [weatherSetting]);
 
