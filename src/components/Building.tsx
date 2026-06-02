@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { Color, DoubleSide, ExtrudeGeometry, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
+import { DoubleSide, ExtrudeGeometry, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
@@ -129,17 +129,15 @@ export function Building({ building, ambience }: BuildingProps) {
 
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
-  const windowColor = useMemo(() => new Color(), []);
   const windowGeometry = useMemo(() => new PlaneGeometry(1, 1), []);
   const windowMaterial = useMemo(
     () =>
       new MeshBasicMaterial({
-        color: '#ffffff',
-        opacity: 0.92,
+        color: '#ffe2a6',
+        opacity: 0.9,
         transparent: true,
         depthWrite: false,
         side: DoubleSide,
-        vertexColors: true,
       }),
     [],
   );
@@ -150,19 +148,15 @@ export function Building({ building, ambience }: BuildingProps) {
     const activeProbability = Math.max(0.04, Math.min(0.78, ambience.windowLightProbability));
     windowSlots.forEach((window, index) => {
       const glow = smoothstep(window.threshold - 0.12, window.threshold + 0.08, activeProbability);
-      const idleGlow = 0.025;
-      const intensity = idleGlow + glow * (0.78 + ambience.signEmissiveIntensity * 0.08);
-      dummy.position.set(window.x, window.y, window.z);
+      const visibleScale = Math.max(0.001, glow);
+      dummy.position.set(window.x, glow > 0.01 ? window.y : -80, window.z);
       dummy.rotation.set(0, window.ry, 0);
-      dummy.scale.set(window.sx, window.sy, 1);
+      dummy.scale.set(window.sx * visibleScale, window.sy * visibleScale, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
-      windowColor.setRGB(1 * intensity, 0.78 * intensity, 0.38 * intensity);
-      mesh.setColorAt(index, windowColor);
     });
     mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-  }, [ambience.signEmissiveIntensity, ambience.windowLightProbability, dummy, windowColor, windowSlots]);
+  }, [ambience.windowLightProbability, dummy, windowSlots]);
 
   return (
     <group position={[x, y, z]}>
