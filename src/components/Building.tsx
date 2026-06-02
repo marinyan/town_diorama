@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { ExtrudeGeometry, InstancedMesh, MeshStandardMaterial, Object3D, PlaneGeometry, Shape } from 'three';
+import { DoubleSide, ExtrudeGeometry, InstancedMesh, MeshBasicMaterial, Object3D, PlaneGeometry, Shape } from 'three';
 import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
@@ -62,14 +62,49 @@ export function Building({ building, ambience }: BuildingProps) {
   const litWindows = useMemo(() => {
     const random = createRandom(building.windowSeed);
     const windows: Array<{ x: number; y: number; z: number; ry: number; sx: number; sy: number }> = [];
-    const columnsX = Math.max(2, Math.floor(w / 0.9));
-    const columnsZ = Math.max(2, Math.floor(d / 0.9));
     const rows = Math.max(2, Math.floor(h / 1.05));
     const addWindow = (wx: number, wy: number, wz: number, ry: number) => {
       if (random.chance(0.68)) {
         windows.push({ x: wx, y: wy, z: wz, ry, sx: random.range(0.22, 0.34), sy: random.range(0.24, 0.36) });
       }
     };
+
+    if (usesFootprint && building.footprint) {
+      const area = building.footprint.reduce((sum, point, index) => {
+        const next = building.footprint?.[(index + 1) % building.footprint.length] ?? point;
+        return sum + point[0] * next[1] - next[0] * point[1];
+      }, 0);
+      const outwardSign = area >= 0 ? 1 : -1;
+
+      for (let edgeIndex = 0; edgeIndex < building.footprint.length; edgeIndex++) {
+        const start = building.footprint[edgeIndex];
+        const end = building.footprint[(edgeIndex + 1) % building.footprint.length];
+        const dx = end[0] - start[0];
+        const dz = end[1] - start[1];
+        const length = Math.hypot(dx, dz);
+        if (length < 0.85) continue;
+
+        const nx = (dz / length) * outwardSign;
+        const nz = (-dx / length) * outwardSign;
+        const ry = Math.atan2(nx, nz);
+        const columns = Math.max(1, Math.floor(length / 0.9));
+
+        for (let row = 1; row < rows; row++) {
+          const wy = row * (h / rows) - h / 2;
+          for (let col = 1; col <= columns; col++) {
+            const t = col / (columns + 1);
+            const wx = start[0] + dx * t + nx * 0.018;
+            const wz = start[1] + dz * t + nz * 0.018;
+            addWindow(wx, wy, wz, ry);
+          }
+        }
+      }
+
+      return windows;
+    }
+
+    const columnsX = Math.max(2, Math.floor(w / 0.9));
+    const columnsZ = Math.max(2, Math.floor(d / 0.9));
 
     for (let row = 1; row < rows; row++) {
       const wy = row * (h / rows) - h / 2;
@@ -85,23 +120,27 @@ export function Building({ building, ambience }: BuildingProps) {
       }
     }
     return windows;
-  }, [building.windowSeed, d, h, w]);
+  }, [building.footprint, building.windowSeed, d, h, usesFootprint, w]);
 
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const windowGeometry = useMemo(() => new PlaneGeometry(1, 1), []);
   const windowMaterial = useMemo(
     () =>
-      new MeshStandardMaterial({
+      new MeshBasicMaterial({
         color: '#ffe2a6',
-        emissive: '#ffd178',
-        emissiveIntensity: (0.18 + ambience.windowLightProbability * 1.25) * (0.72 + ambience.signEmissiveIntensity * 0.25),
-        opacity: 0.18 + ambience.windowLightProbability * 0.82,
+        opacity: 0.82,
         transparent: true,
-        roughness: 0.2,
+        depthWrite: false,
+        side: DoubleSide,
       }),
-    [ambience.signEmissiveIntensity, ambience.windowLightProbability],
+    [],
   );
+
+  useLayoutEffect(() => {
+    windowMaterial.opacity = 0.48 + ambience.windowLightProbability * 0.52;
+    windowMaterial.needsUpdate = true;
+  }, [ambience.windowLightProbability, windowMaterial]);
 
   useLayoutEffect(() => {
     const mesh = windowRef.current;
