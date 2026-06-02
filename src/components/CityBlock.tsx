@@ -2,9 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { BoxGeometry, BufferGeometry, Float32BufferAttribute, MeshStandardMaterial } from 'three';
 import { Ambience } from '../ambience';
 import { CityLayout } from '../cityData';
-import { verticalUnitsPerMeter } from '../map/elevationSampler';
+import { sampleElevationUnits } from '../map/elevationSampler';
 import { ElevationGrid } from '../map/elevationTypes';
-import { projectLonLat } from '../map/projectGeo';
 import { Building } from './Building';
 
 type CityBlockProps = {
@@ -14,31 +13,30 @@ type CityBlockProps = {
 
 const roadXs = [-27, -18, -9, 0, 9, 18, 27];
 const roadZs = [-24, -15, -5, 5, 15, 24];
+const fieldSize = { width: 72, depth: 62 };
+const terrainResolution = { columns: 45, rows: 39 };
 
 function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
   const geometry = useMemo(() => {
     if (!grid) return null;
     const vertices: number[] = [];
     const indices: number[] = [];
-    const center = grid.center;
 
-    // The elevation JSON stores relative meters; the same vertical scale is
-    // used by roads/buildings so the surface lines up with street objects.
-    for (let row = 0; row < grid.rows; row++) {
-      const lat = grid.bbox.north - (row / (grid.rows - 1)) * (grid.bbox.north - grid.bbox.south);
-      for (let column = 0; column < grid.columns; column++) {
-        const lon = grid.bbox.west + (column / (grid.columns - 1)) * (grid.bbox.east - grid.bbox.west);
-        const projected = projectLonLat(lon, lat, center);
-        const heightMeters = grid.valuesMeters[row * grid.columns + column] ?? 0;
-        vertices.push(projected.x, heightMeters * verticalUnitsPerMeter - 0.12, projected.y);
+    // Render a full diorama base, not just the OSM bbox. Samples outside the
+    // fetched bbox clamp to its edge height, which keeps the plinth continuous.
+    for (let row = 0; row < terrainResolution.rows; row++) {
+      const z = -fieldSize.depth / 2 + (row / (terrainResolution.rows - 1)) * fieldSize.depth;
+      for (let column = 0; column < terrainResolution.columns; column++) {
+        const x = -fieldSize.width / 2 + (column / (terrainResolution.columns - 1)) * fieldSize.width;
+        vertices.push(x, sampleElevationUnits(grid, x, z) - 0.12, z);
       }
     }
 
-    for (let row = 0; row < grid.rows - 1; row++) {
-      for (let column = 0; column < grid.columns - 1; column++) {
-        const a = row * grid.columns + column;
+    for (let row = 0; row < terrainResolution.rows - 1; row++) {
+      for (let column = 0; column < terrainResolution.columns - 1; column++) {
+        const a = row * terrainResolution.columns + column;
         const b = a + 1;
-        const c = a + grid.columns;
+        const c = a + terrainResolution.columns;
         const d = c + 1;
         indices.push(a, c, b, b, c, d);
       }
@@ -58,7 +56,7 @@ function TerrainSurface({ grid }: { grid?: ElevationGrid }) {
   if (!geometry) {
     return (
       <mesh receiveShadow position={[0, -0.08, 0]}>
-        <boxGeometry args={[72, 0.15, 62]} />
+        <boxGeometry args={[fieldSize.width, 0.15, fieldSize.depth]} />
         <meshStandardMaterial color="#3b423e" roughness={0.86} />
       </mesh>
     );
