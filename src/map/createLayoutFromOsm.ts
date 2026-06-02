@@ -11,6 +11,12 @@ const fieldLimit = {
   z: 30.5,
 };
 
+type PathCandidate = {
+  path: CrowdPath;
+  score: number;
+  tieBreak: number;
+};
+
 function isWay(element: { type: string }): element is OsmWay {
   return element.type === 'way';
 }
@@ -135,6 +141,54 @@ function roadElevation(tags: Record<string, string> | undefined) {
   return Math.max(-0.18, Math.min(1.45, elevation));
 }
 
+function pathLength(points: Vector3[]) {
+  let length = 0;
+  for (let index = 1; index < points.length; index++) {
+    length += points[index - 1].distanceTo(points[index]);
+  }
+  return length;
+}
+
+function pathScore(tags: Record<string, string> | undefined, road: RoadData, length: number) {
+  const highway = tags?.highway;
+  const pedestrianKinds = ['footway', 'path', 'steps', 'pedestrian', 'living_street', 'service'];
+  const vehicleKinds = ['primary', 'secondary', 'tertiary'];
+  let score = 0;
+
+  if (pedestrianKinds.includes(highway ?? '')) score += 7;
+  if (road.kind === 'alley') score += 4;
+  if (road.hasSteps) score += 5;
+  if (tags?.sidewalk === 'both' || tags?.sidewalk === 'left' || tags?.sidewalk === 'right') score += 2;
+  if (tags?.tunnel || tags?.bridge || tags?.layer) score += 1.5;
+  if (vehicleKinds.includes(highway ?? '')) score -= 3;
+
+  score += Math.min(5, length * 0.25);
+  if (length < 1.1) score -= 4;
+  if (length > 24) score -= 1.5;
+
+  return score;
+}
+
+function createRoadPath(id: string, road: RoadData, random: ReturnType<typeof createRandom>): CrowdPath | undefined {
+  const visiblePoints = road.points.filter(isInsideField);
+  const sourcePoints = visiblePoints.length >= 2 ? visiblePoints : road.points;
+  if (sourcePoints.length < 2) return undefined;
+  const forward = sourcePoints.map((position, index) => ({
+    position: position.clone().setY(position.y + 0.045),
+    pause: index === 1 && random.chance(0.28) ? random.range(0.4, 1.4) : 0,
+  }));
+  const reverse = forward
+    .slice(1, -1)
+    .reverse()
+    .map((point) => ({ ...point, position: point.position.clone(), pause: 0 }));
+
+  return {
+    id,
+    zone: road.kind === 'main' ? 'commute' : road.kind === 'alley' ? 'nightlife' : 'scatter',
+    points: [...forward, ...reverse],
+  };
+}
+
 export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, elevationGrid?: ElevationGrid): CityLayout {
   const random = createRandom(seed);
   const nodes = new Map<number, OsmNode>();
@@ -148,6 +202,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
   const buildings: BuildingData[] = [];
   const roads: RoadData[] = [];
   const paths: CrowdPath[] = [];
+  const pathCandidates: PathCandidate[] = [];
   const doors: Vector3[] = [];
 
   for (const way of ways) {
@@ -206,18 +261,24 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
         hasSteps: way.tags.highway === 'steps',
       };
       roads.push(road);
-      if (roadPoints.length >= 3 && paths.length < 42) {
-        paths.push({
-          id: `osm-path-${way.id}`,
-          zone: road.kind === 'main' ? 'commute' : road.kind === 'alley' ? 'nightlife' : 'scatter',
-          points: roadPoints.map((position, index) => ({
-            position: position.clone().setY(position.y + 0.045),
-            pause: index === 1 && random.chance(0.35) ? random.range(0.5, 1.6) : 0,
-          })),
+      const length = pathLength(roadPoints);
+      const path = createRoadPath(`osm-path-${way.id}`, road, random);
+      if (path && length >= 0.9) {
+        pathCandidates.push({
+          path,
+          score: pathScore(way.tags, road, length),
+          tieBreak: random.next(),
         });
       }
     }
   }
+
+  // Use more OSM roads as movement paths, but bias toward routes a person
+  // would plausibly walk through: alleys, steps, footways, service lanes.
+  pathCandidates
+    .sort((a, b) => b.score - a.score || a.tieBreak - b.tieBreak)
+    .slice(0, 76)
+    .forEach((candidate) => paths.push(candidate.path));
 
   if (paths.length === 0) {
     throw new Error('OSM payload did not contain usable road paths');
