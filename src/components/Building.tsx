@@ -66,7 +66,7 @@ export function Building({ building, ambience }: BuildingProps) {
     const columnsZ = Math.max(2, Math.floor(d / 0.9));
     const rows = Math.max(2, Math.floor(h / 1.05));
     const addWindow = (wx: number, wy: number, wz: number, ry: number) => {
-      if (random.chance(ambience.windowLightProbability)) {
+      if (random.chance(0.68)) {
         windows.push({ x: wx, y: wy, z: wz, ry, sx: random.range(0.22, 0.34), sy: random.range(0.24, 0.36) });
       }
     };
@@ -85,7 +85,7 @@ export function Building({ building, ambience }: BuildingProps) {
       }
     }
     return windows;
-  }, [ambience.windowLightProbability, building.windowSeed, d, h, w]);
+  }, [building.windowSeed, d, h, w]);
 
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
@@ -95,10 +95,12 @@ export function Building({ building, ambience }: BuildingProps) {
       new MeshStandardMaterial({
         color: '#ffe2a6',
         emissive: '#ffd178',
-        emissiveIntensity: 0.75 + ambience.signEmissiveIntensity * 0.5,
+        emissiveIntensity: (0.18 + ambience.windowLightProbability * 1.25) * (0.72 + ambience.signEmissiveIntensity * 0.25),
+        opacity: 0.18 + ambience.windowLightProbability * 0.82,
+        transparent: true,
         roughness: 0.2,
       }),
-    [ambience.signEmissiveIntensity],
+    [ambience.signEmissiveIntensity, ambience.windowLightProbability],
   );
 
   useLayoutEffect(() => {
