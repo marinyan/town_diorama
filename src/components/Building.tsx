@@ -4,6 +4,7 @@ import { Ambience } from '../ambience';
 import { BuildingData } from '../cityData';
 import { createRandom } from '../random';
 import { AviationLight } from './AviationLight';
+import { ProjectingSign, ProjectingSignSpec, SignSide } from './ProjectingSign';
 import { RooftopDetail } from './RooftopDetail';
 import { Sign } from './Sign';
 
@@ -16,6 +17,33 @@ export function Building({ building, ambience }: BuildingProps) {
   const [x, y, z] = building.position;
   const [w, h, d] = building.size;
   const usesFootprint = Boolean(building.footprint && building.footprint.length >= 3);
+  const projectingSigns = useMemo(() => {
+    if (h > 8.9 || h < 2.2) return [];
+    const random = createRandom(building.windowSeed + 1205);
+    const palette = ['#f25f5c', '#4db3df', '#f2c14e', '#70c878', '#f08ac0', '#fff0a8'];
+    const sideChoices: SignSide[] = ['north', 'south', 'east', 'west'];
+    const preferredSides = building.signSides.length > 0 ? building.signSides : [random.pick(sideChoices)];
+    const specs: ProjectingSignSpec[] = [];
+
+    preferredSides.forEach((side) => {
+      if (!random.chance(usesFootprint ? 0.82 : 0.58)) return;
+      const sideSpan = side === 'north' || side === 'south' ? w : d;
+      const count = random.chance(h < 5.2 ? 0.55 : 0.22) ? 2 : 1;
+      for (let i = 0; i < count; i++) {
+        specs.push({
+          side,
+          offset: random.range(-sideSpan * 0.32, sideSpan * 0.32),
+          y: random.range(-h * 0.28, h * 0.24),
+          height: random.range(0.85, Math.min(1.9, h * 0.42)),
+          width: random.range(0.22, 0.42),
+          protrude: random.range(0.55, 1.05),
+          color: random.pick(palette),
+        });
+      }
+    });
+
+    return specs.slice(0, 3);
+  }, [building.signSides, building.windowSeed, d, h, usesFootprint, w]);
   const extrudedGeometry = useMemo(() => {
     if (!usesFootprint || !building.footprint) return null;
     const shape = new Shape();
@@ -115,6 +143,9 @@ export function Building({ building, ambience }: BuildingProps) {
         building.signSides.map((side, index) => (
           <Sign key={`${building.id}-sign-${side}-${index}`} side={side} buildingSize={building.size} ambience={ambience} index={index} />
         ))}
+      {projectingSigns.map((spec, index) => (
+        <ProjectingSign key={`${building.id}-projecting-sign-${index}`} buildingSize={building.size} ambience={ambience} spec={spec} />
+      ))}
       {!usesFootprint ? <RooftopDetail size={building.size} seed={building.windowSeed + 42} hasStairs={building.hasStairs} /> : null}
       {h >= 9.8 && building.windowSeed % 3 === 0 ? <AviationLight height={h} seed={building.windowSeed} /> : null}
     </group>
