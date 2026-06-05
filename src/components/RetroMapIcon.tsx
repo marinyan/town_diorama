@@ -21,6 +21,8 @@ const tempB = new Vector3();
 const umbrellaOpenDelay = 0.72;
 const iconGroundClearance = 0.3;
 const umbrellaGroundClearance = 0.4;
+const insideBoundsScale = 0.78;
+const occlusionBoundsScale = 0.68;
 
 type AgentSample = {
   hidden: boolean;
@@ -78,22 +80,23 @@ function sampleAgent(agent: IconAgent, elapsed: number, output: Vector3): AgentS
 }
 
 function isInsideBuilding(position: Vector3, occluders: IconOccluder[]) {
-  const margin = 0.04;
   return occluders.some(
     (building) =>
       position.y < building.top + 0.08 &&
-      Math.abs(position.x - building.x) < building.w / 2 + margin &&
-      Math.abs(position.z - building.z) < building.d / 2 + margin,
+      Math.abs(position.x - building.x) < (building.w * insideBoundsScale) / 2 &&
+      Math.abs(position.z - building.z) < (building.d * insideBoundsScale) / 2,
   );
 }
 
 function segmentHitsBuilding(from: Vector3, to: Vector3, building: IconOccluder) {
-  const minX = building.x - building.w / 2;
-  const maxX = building.x + building.w / 2;
+  const halfW = (building.w * occlusionBoundsScale) / 2;
+  const halfD = (building.d * occlusionBoundsScale) / 2;
+  const minX = building.x - halfW;
+  const maxX = building.x + halfW;
   const minY = 0;
   const maxY = building.top + 0.08;
-  const minZ = building.z - building.d / 2;
-  const maxZ = building.z + building.d / 2;
+  const minZ = building.z - halfD;
+  const maxZ = building.z + halfD;
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = to.z - from.z;
@@ -150,7 +153,7 @@ export function RetroMapIcon({ agent, occluders }: RetroMapIconProps) {
     const umbrellaVisible =
       isUmbrella && (sample.secondsSinceDoorExit === undefined || sample.secondsSinceDoorExit > umbrellaOpenDelay);
     const targetAlpha = targetVisible ? 1 : 0;
-    const fadeSpeed = targetVisible ? 6 : 9;
+    const fadeSpeed = targetVisible ? 7 : 3.4;
     alpha.current += (targetAlpha - alpha.current) * Math.min(1, delta * fadeSpeed);
     umbrellaAlpha.current += ((umbrellaVisible ? 1 : 0) - umbrellaAlpha.current) * Math.min(1, delta * 7);
     group.visible = alpha.current > 0.025;
