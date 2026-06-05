@@ -137,7 +137,9 @@ export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible,
           <Stars radius={70} depth={18} count={650} factor={2.1} saturation={0.2} fade speed={0.08} />
         ) : null}
         <CityBlock layout={layout} ambience={ambience} />
-        {crowdVisible ? <IconCrowd paths={layout.paths} buildings={layout.buildings} ambience={ambience} /> : null}
+        {crowdVisible ? (
+          <IconCrowd paths={layout.paths} buildings={layout.buildings} ambience={ambience} metersPerUnit={layout.metersPerUnit} />
+        ) : null}
         <WeatherSystem ambience={ambience} visible={rainVisible} />
       </group>
     </>

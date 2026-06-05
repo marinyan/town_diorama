@@ -53,6 +53,7 @@ export type CityLayout = {
   doors: Vector3[];
   source?: 'procedural' | 'osm';
   elevationGrid?: ElevationGrid;
+  metersPerUnit?: number;
 };
 
 const roadXs = [-27, -18, -9, 0, 9, 18, 27];
@@ -177,5 +178,5 @@ export function createCityLayout(seed = 1984): CityLayout {
     });
   }
 
-  return { buildings, paths, doors, source: 'procedural' };
+  return { buildings, paths, doors, source: 'procedural', metersPerUnit: 8 };
 }

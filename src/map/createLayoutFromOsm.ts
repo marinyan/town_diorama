@@ -334,5 +334,5 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
     throw new Error('OSM payload did not contain usable road paths');
   }
 
-  return { buildings, paths, roads, waters, doors, source: 'osm', elevationGrid };
+  return { buildings, paths, roads, waters, doors, source: 'osm', elevationGrid, metersPerUnit };
 }

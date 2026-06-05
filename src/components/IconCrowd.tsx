@@ -8,6 +8,7 @@ type IconCrowdProps = {
   paths: CrowdPath[];
   buildings: BuildingData[];
   ambience: Ambience;
+  metersPerUnit?: number;
 };
 
 export type IconAgent = {
@@ -36,7 +37,11 @@ export type IconOccluder = {
   top: number;
 };
 
-export function IconCrowd({ paths, buildings, ambience }: IconCrowdProps) {
+function iconScaleForMap(metersPerUnit = 8) {
+  return Math.min(1.12, Math.max(0.56, Math.sqrt(8 / metersPerUnit)));
+}
+
+export function IconCrowd({ paths, buildings, ambience, metersPerUnit }: IconCrowdProps) {
   const occluders = useMemo(
     () =>
       buildings.map((building) => ({
@@ -62,6 +67,7 @@ export function IconCrowd({ paths, buildings, ambience }: IconCrowdProps) {
               ? 0.74
               : 1;
     const count = Math.round(360 * ambience.pedestrianDensity * weatherDensity);
+    const mapIconScale = iconScaleForMap(metersPerUnit);
     const weightedPaths = paths.flatMap((path) => {
       const zoneWeight = zoneWeights[path.zone][ambience.timePreset] ?? 0.5;
       const nightlifeBoost = path.zone === 'nightlife' ? ambience.nightlifeDensity : 1;
@@ -94,7 +100,7 @@ export function IconCrowd({ paths, buildings, ambience }: IconCrowdProps) {
         phase: random.range(0, 1),
         color: variant === 'warm' ? random.pick(['#7dc8ff', '#a8dbff', '#76d2c5', '#f2c36b']) : '#3398e6',
         variant,
-        scale: random.range(0.72, 1.08),
+        scale: random.range(0.72, 1.08) * mapIconScale,
       };
     });
   }, [
@@ -103,6 +109,7 @@ export function IconCrowd({ paths, buildings, ambience }: IconCrowdProps) {
     ambience.state.weather,
     ambience.timePreset,
     ambience.umbrellaRatio,
+    metersPerUnit,
     paths,
   ]);
 
