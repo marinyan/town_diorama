@@ -275,9 +275,10 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
 
   // Use more OSM roads as movement paths, but bias toward routes a person
   // would plausibly walk through: alleys, steps, footways, service lanes.
+  const pathLimit = metersPerUnit > 14 ? 180 : 76;
   pathCandidates
     .sort((a, b) => b.score - a.score || a.tieBreak - b.tieBreak)
-    .slice(0, 76)
+    .slice(0, pathLimit)
     .forEach((candidate) => paths.push(candidate.path));
 
   if (paths.length === 0) {

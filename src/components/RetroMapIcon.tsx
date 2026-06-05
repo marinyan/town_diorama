@@ -76,7 +76,7 @@ function sampleAgent(agent: IconAgent, elapsed: number, output: Vector3): AgentS
 }
 
 function isInsideBuilding(position: Vector3, occluders: IconOccluder[]) {
-  const margin = 0.18;
+  const margin = 0.04;
   return occluders.some(
     (building) =>
       position.y < building.top + 0.08 &&
@@ -86,12 +86,12 @@ function isInsideBuilding(position: Vector3, occluders: IconOccluder[]) {
 }
 
 function segmentHitsBuilding(from: Vector3, to: Vector3, building: IconOccluder) {
-  const minX = building.x - building.w / 2 - 0.04;
-  const maxX = building.x + building.w / 2 + 0.04;
+  const minX = building.x - building.w / 2;
+  const maxX = building.x + building.w / 2;
   const minY = 0;
   const maxY = building.top + 0.08;
-  const minZ = building.z - building.d / 2 - 0.04;
-  const maxZ = building.z + building.d / 2 + 0.04;
+  const minZ = building.z - building.d / 2;
+  const maxZ = building.z + building.d / 2;
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = to.z - from.z;
