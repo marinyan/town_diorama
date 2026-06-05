@@ -19,6 +19,8 @@ const bodyGeometry = new ShapeGeometry(bodyShape);
 const tempA = new Vector3();
 const tempB = new Vector3();
 const umbrellaOpenDelay = 0.72;
+const iconGroundClearance = 0.3;
+const umbrellaGroundClearance = 0.4;
 
 type AgentSample = {
   hidden: boolean;
@@ -153,7 +155,7 @@ export function RetroMapIcon({ agent, occluders }: RetroMapIconProps) {
     umbrellaAlpha.current += ((umbrellaVisible ? 1 : 0) - umbrellaAlpha.current) * Math.min(1, delta * 7);
     group.visible = alpha.current > 0.025;
     group.position.copy(position.current);
-    group.position.y += isUmbrella ? 0.22 : 0.14;
+    group.position.y += isUmbrella ? umbrellaGroundClearance : iconGroundClearance;
     group.quaternion.copy(camera.quaternion);
     group.scale.setScalar(agent.scale);
 

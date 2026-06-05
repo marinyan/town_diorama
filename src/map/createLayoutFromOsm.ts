@@ -10,6 +10,7 @@ const fieldLimit = {
   x: 35.5,
   z: 30.5,
 };
+const metersPerDegreeLat = 111_320;
 
 type PathCandidate = {
   path: CrowdPath;
@@ -185,6 +186,15 @@ function pathScore(tags: Record<string, string> | undefined, road: RoadData, len
   return score;
 }
 
+function mapAreaUnits(payload: OsmPayload, metersPerUnit: number) {
+  if (!payload.bbox) return 0;
+  const centerLat = payload.center?.lat ?? (payload.bbox.south + payload.bbox.north) / 2;
+  const metersPerDegreeLon = Math.cos((centerLat * Math.PI) / 180) * metersPerDegreeLat;
+  const width = ((payload.bbox.east - payload.bbox.west) * metersPerDegreeLon) / metersPerUnit;
+  const depth = ((payload.bbox.north - payload.bbox.south) * metersPerDegreeLat) / metersPerUnit;
+  return Math.max(0, width * depth);
+}
+
 function createRoadPath(id: string, road: RoadData, random: ReturnType<typeof createRandom>): CrowdPath | undefined {
   const visiblePoints = road.points.filter(isInsideField);
   const sourcePoints = visiblePoints.length >= 2 ? visiblePoints : road.points;
@@ -310,7 +320,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
 
   // Use more OSM roads as movement paths, but bias toward routes a person
   // would plausibly walk through: alleys, steps, footways, service lanes.
-  const pathLimit = metersPerUnit > 14 ? 180 : 76;
+  const pathLimit = Math.round(Math.min(220, Math.max(76, mapAreaUnits(payload, metersPerUnit) * 0.065)));
   pathCandidates
     .sort((a, b) => b.score - a.score || a.tieBreak - b.tieBreak)
     .slice(0, pathLimit)
