@@ -4,10 +4,11 @@ import { Mesh, PointLight } from 'three';
 
 type AviationLightProps = {
   height: number;
+  opacity?: number;
   seed: number;
 };
 
-export function AviationLight({ height, seed }: AviationLightProps) {
+export function AviationLight({ height, opacity = 1, seed }: AviationLightProps) {
   const meshRef = useRef<Mesh>(null);
   const lightRef = useRef<PointLight>(null);
   const phase = (seed % 997) / 997;
@@ -17,10 +18,10 @@ export function AviationLight({ height, seed }: AviationLightProps) {
     const intensity = 0.04 + pulse * pulse * 0.34;
     if (meshRef.current) {
       const material = Array.isArray(meshRef.current.material) ? meshRef.current.material[0] : meshRef.current.material;
-      material.opacity = 0.16 + pulse * 0.44;
+      material.opacity = (0.16 + pulse * 0.44) * opacity;
     }
     if (lightRef.current) {
-      lightRef.current.intensity = intensity;
+      lightRef.current.intensity = intensity * opacity;
     }
   });
 

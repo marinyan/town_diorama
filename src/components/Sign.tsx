@@ -6,11 +6,12 @@ type SignProps = {
   buildingSize: [number, number, number];
   ambience: Ambience;
   index: number;
+  opacity?: number;
 };
 
 const signColors = ['#f05d5e', '#4ca7d9', '#f0bd45', '#74c476', '#e77eb5'];
 
-export function Sign({ side, buildingSize, ambience, index }: SignProps) {
+export function Sign({ side, buildingSize, ambience, index, opacity = 1 }: SignProps) {
   const [w, h, d] = buildingSize;
   const color = signColors[index % signColors.length];
   const transform = useMemo(() => {
@@ -25,15 +26,37 @@ export function Sign({ side, buildingSize, ambience, index }: SignProps) {
     <group position={transform.position} rotation={transform.rotation}>
       <mesh>
         <boxGeometry args={transform.size} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={ambience.signEmissiveIntensity} roughness={0.32} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={ambience.signEmissiveIntensity * opacity}
+          opacity={opacity}
+          roughness={0.32}
+          transparent={opacity < 0.999}
+          depthWrite={opacity >= 0.999}
+        />
       </mesh>
       <mesh position={[0, 0, 0.04]}>
         <boxGeometry args={[transform.size[0] * 0.66, 0.055, 0.025]} />
-        <meshStandardMaterial color="#fff4d7" emissive="#ffe8b0" emissiveIntensity={ambience.signEmissiveIntensity * 0.8} />
+        <meshStandardMaterial
+          color="#fff4d7"
+          emissive="#ffe8b0"
+          emissiveIntensity={ambience.signEmissiveIntensity * 0.8 * opacity}
+          opacity={opacity}
+          transparent={opacity < 0.999}
+          depthWrite={opacity >= 0.999}
+        />
       </mesh>
       <mesh position={[0, -0.16, 0.04]}>
         <boxGeometry args={[transform.size[0] * 0.42, 0.045, 0.025]} />
-        <meshStandardMaterial color="#fff4d7" emissive="#ffe8b0" emissiveIntensity={ambience.signEmissiveIntensity * 0.65} />
+        <meshStandardMaterial
+          color="#fff4d7"
+          emissive="#ffe8b0"
+          emissiveIntensity={ambience.signEmissiveIntensity * 0.65 * opacity}
+          opacity={opacity}
+          transparent={opacity < 0.999}
+          depthWrite={opacity >= 0.999}
+        />
       </mesh>
     </group>
   );

@@ -79,7 +79,7 @@ function CameraRig({
       const viewWidth = size.width / Math.max(1, camera.zoom);
       const viewHeight = size.height / Math.max(1, camera.zoom);
       const viewRadius = Math.hypot(viewWidth, viewHeight) * 0.58 + 8;
-      if (Math.abs(viewRadius - lastReportedRadius.current) > 0.6) {
+      if (Math.abs(viewRadius - lastReportedRadius.current) > 0.25) {
         lastReportedRadius.current = viewRadius;
         onViewBoundsChange({
           minX: target.x - viewRadius,

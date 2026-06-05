@@ -1,5 +1,5 @@
 import { useFrame } from '@react-three/fiber';
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { BoxGeometry, InstancedMesh, MeshBasicMaterial, Object3D } from 'three';
 import { Ambience } from '../ambience';
 import { createRandom } from '../random';
@@ -49,21 +49,17 @@ export function WeatherSystem({ ambience, visible }: WeatherSystemProps) {
       phase: random.range(-1, 1),
     }));
   }, []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => material.dispose(), [material]);
 
   useLayoutEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
+    const activeCount = visible ? count : 0;
+    mesh.count = activeCount;
     material.color.set(isSnow ? '#f2f7ff' : isStorm ? '#c5ddff' : '#b8d9ff');
-    for (let i = 0; i < drops.length; i++) {
+    for (let i = 0; i < activeCount; i++) {
       const drop = drops[i];
-      if (!visible || i >= count) {
-        dummy.position.set(0, -80, 0);
-        dummy.rotation.set(0, 0, 0);
-        dummy.scale.setScalar(0.001);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-        continue;
-      }
       dummy.position.set(drop.x, drop.y, drop.z);
       dummy.rotation.set(isSnow ? 0 : 0.12 + windFactor * 0.18, 0, isSnow ? 0 : -0.12 - windFactor * (isStorm ? 0.48 : 0.58));
       dummy.scale.set(isSnow ? 0.07 : isDrizzle ? 0.01 : 0.018, isSnow ? 0.07 : drop.length, isSnow ? 0.07 : isDrizzle ? 0.01 : 0.018);
@@ -71,11 +67,13 @@ export function WeatherSystem({ ambience, visible }: WeatherSystemProps) {
       mesh.setMatrixAt(i, dummy.matrix);
     }
     mesh.instanceMatrix.needsUpdate = true;
-  }, [count, drops, dummy, isSnow, material.color, visible, windFactor]);
+  }, [count, drops, dummy, isDrizzle, isSnow, isStorm, material.color, visible, windFactor]);
 
   useFrame((_, delta) => {
     const mesh = meshRef.current;
     if (!mesh) return;
+    const activeCount = visible ? count : 0;
+    if (mesh.count !== activeCount) mesh.count = activeCount;
     material.opacity = isSnow ? 0.22 + rainIntensity * 0.34 : isDrizzle ? 0.08 + rainIntensity * 0.18 : 0.12 + rainIntensity * (isStorm ? 0.38 : 0.28);
     material.color.set(isSnow ? '#f2f7ff' : isStorm ? '#c5ddff' : '#b8d9ff');
     const fallBoost = isSnow ? 0.24 + rainIntensity * 0.16 : isDrizzle ? 0.62 + rainIntensity * 0.16 : 1 + rainIntensity * (isStorm ? 0.7 : 0.45);
@@ -84,16 +82,8 @@ export function WeatherSystem({ ambience, visible }: WeatherSystemProps) {
       : isDrizzle
         ? 0.18 + ambience.state.windSpeedKmh * 0.07
         : 0.35 + ambience.state.windSpeedKmh * (isStorm ? 0.2 : 0.13);
-    for (let i = 0; i < maxDrops; i++) {
+    for (let i = 0; i < activeCount; i++) {
       const drop = drops[i];
-      if (!visible || i >= count) {
-        dummy.position.set(0, -80, 0);
-        dummy.rotation.set(0, 0, 0);
-        dummy.scale.setScalar(0.001);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(i, dummy.matrix);
-        continue;
-      }
       drop.y -= drop.speed * fallBoost * delta;
       drop.x -= delta * windDrift;
       drop.z += delta * drop.phase * (isSnow ? 0.42 + windFactor * 0.58 : windFactor * 0.55);

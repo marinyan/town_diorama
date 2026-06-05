@@ -15,10 +15,11 @@ export type ProjectingSignSpec = {
 type ProjectingSignProps = {
   buildingSize: [number, number, number];
   ambience: Ambience;
+  opacity?: number;
   spec: ProjectingSignSpec;
 };
 
-export function ProjectingSign({ buildingSize, ambience, spec }: ProjectingSignProps) {
+export function ProjectingSign({ buildingSize, ambience, opacity = 1, spec }: ProjectingSignProps) {
   const [w, , d] = buildingSize;
   const isNorth = spec.side === 'north';
   const isSouth = spec.side === 'south';
@@ -42,13 +43,23 @@ export function ProjectingSign({ buildingSize, ambience, spec }: ProjectingSignP
         <meshStandardMaterial
           color={spec.color}
           emissive={spec.color}
-          emissiveIntensity={ambience.signEmissiveIntensity * 1.15}
+          emissiveIntensity={ambience.signEmissiveIntensity * 1.15 * opacity}
+          opacity={opacity}
           roughness={0.28}
+          transparent={opacity < 0.999}
+          depthWrite={opacity >= 0.999}
         />
       </mesh>
       <mesh position={bracketPosition}>
         <boxGeometry args={bracketSize} />
-        <meshStandardMaterial color="#5c6464" roughness={0.62} metalness={0.12} />
+        <meshStandardMaterial
+          color="#5c6464"
+          roughness={0.62}
+          metalness={0.12}
+          opacity={opacity}
+          transparent={opacity < 0.999}
+          depthWrite={opacity >= 0.999}
+        />
       </mesh>
       {[-0.28, 0, 0.28].map((dy, index) => (
         <mesh key={index} position={[signX, spec.y + dy * spec.height, signZ]}>
@@ -56,8 +67,11 @@ export function ProjectingSign({ buildingSize, ambience, spec }: ProjectingSignP
           <meshStandardMaterial
             color="#fff1c4"
             emissive="#ffe4a2"
-            emissiveIntensity={ambience.signEmissiveIntensity * 0.85}
+            emissiveIntensity={ambience.signEmissiveIntensity * 0.85 * opacity}
+            opacity={opacity}
             roughness={0.22}
+            transparent={opacity < 0.999}
+            depthWrite={opacity >= 0.999}
           />
         </mesh>
       ))}

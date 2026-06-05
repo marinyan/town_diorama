@@ -22,6 +22,8 @@ import { Sign } from './Sign';
 type BuildingProps = {
   building: BuildingData;
   ambience: Ambience;
+  detailLevel?: BuildingDetailLevel;
+  detailFade?: number;
 };
 
 type WindowSlot = {
@@ -34,6 +36,8 @@ type WindowSlot = {
   threshold: number;
   warmth: number;
 };
+
+export type BuildingDetailLevel = 'full' | 'medium' | 'low';
 
 function smoothstep(edge0: number, edge1: number, value: number) {
   const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
@@ -147,7 +151,7 @@ function GabledRoof({ ambience, building }: { ambience: Ambience; building: Buil
   );
 }
 
-function WindowLayer({ ambience, color, slots }: { ambience: Ambience; color: string; slots: WindowSlot[] }) {
+function WindowLayer({ ambience, color, detailFade, slots }: { ambience: Ambience; color: string; detailFade: number; slots: WindowSlot[] }) {
   const windowRef = useRef<InstancedMesh>(null);
   const dummy = useMemo(() => new Object3D(), []);
   const geometry = useMemo(() => {
@@ -172,23 +176,27 @@ function WindowLayer({ ambience, color, slots }: { ambience: Ambience; color: st
       dummy.scale.set(window.sx, window.sy, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(index, dummy.matrix);
-      alphaAttribute.setX(index, glow);
+      alphaAttribute.setX(index, glow * detailFade);
     });
     mesh.instanceMatrix.needsUpdate = true;
     alphaAttribute.needsUpdate = true;
-  }, [ambience.windowLightProbability, dummy, geometry, slots]);
+  }, [ambience.windowLightProbability, detailFade, dummy, geometry, slots]);
 
-  if (slots.length === 0) return null;
+  if (slots.length === 0 || detailFade <= 0.01) return null;
   return <instancedMesh ref={windowRef} args={[geometry, material, slots.length]} renderOrder={2} />;
 }
 
-export function Building({ building, ambience }: BuildingProps) {
+export function Building({ building, ambience, detailFade = 1, detailLevel = 'full' }: BuildingProps) {
   const [x, y, z] = building.position;
   const [w, h, d] = building.size;
   const usesFootprint = Boolean(building.footprint && building.footprint.length >= 3);
   const hasGabledRoof = building.roofStyle === 'gable';
+  const detailOpacity = Math.max(0, Math.min(1, detailFade));
+  const showMediumDetails = detailLevel !== 'low' && detailOpacity > 0.01;
+  const showFullDetails = detailLevel === 'full' && detailOpacity > 0.01;
   const roofSnowOpacity = Math.min(0.42, ambience.snowCover * 0.52);
   const projectingSigns = useMemo(() => {
+    if (!showFullDetails) return [];
     if (h > 8.9 || h < 2.2) return [];
     const random = createRandom(building.windowSeed + 1205);
     const palette = ['#f25f5c', '#4db3df', '#f2c14e', '#70c878', '#f08ac0', '#fff0a8'];
@@ -213,7 +221,7 @@ export function Building({ building, ambience }: BuildingProps) {
     }
 
     return specs.slice(0, 3);
-  }, [building.signSides, building.windowSeed, d, h, usesFootprint, w]);
+  }, [building.signSides, building.windowSeed, d, h, showFullDetails, usesFootprint, w]);
   const extrudedGeometry = useMemo(() => {
     if (!usesFootprint || !building.footprint) return null;
     const shape = new Shape();
@@ -231,12 +239,17 @@ export function Building({ building, ambience }: BuildingProps) {
     geometry.computeVertexNormals();
     return geometry;
   }, [building.footprint, h, usesFootprint]);
+  useEffect(() => () => extrudedGeometry?.dispose(), [extrudedGeometry]);
   const windowSlots = useMemo(() => {
+    if (!showMediumDetails) return [];
     const random = createRandom(building.windowSeed);
     const windows: WindowSlot[] = [];
-    const rows = Math.max(2, Math.floor(h / 1.05));
+    const rowSpacing = detailLevel === 'medium' ? 1.8 : 1.05;
+    const columnSpacing = detailLevel === 'medium' ? 1.65 : 0.9;
+    const windowChance = detailLevel === 'medium' ? 0.52 : 0.78;
+    const rows = Math.max(2, Math.floor(h / rowSpacing));
     const addWindow = (wx: number, wy: number, wz: number, ry: number) => {
-      if (!random.chance(0.78)) return;
+      if (!random.chance(windowChance)) return;
       const threshold = Math.pow(random.next(), 1.35);
       windows.push({
         x: wx,
@@ -270,7 +283,7 @@ export function Building({ building, ambience }: BuildingProps) {
         const nx = (dz / length) * outwardSign;
         const nz = (-dx / length) * outwardSign;
         const ry = Math.atan2(nx, nz);
-        const columns = Math.max(1, Math.floor(length / 0.9));
+        const columns = Math.max(1, Math.floor(length / columnSpacing));
 
         for (let row = 1; row < rows; row++) {
           const wy = row * (h / rows) - h / 2;
@@ -286,8 +299,8 @@ export function Building({ building, ambience }: BuildingProps) {
       return windows;
     }
 
-    const columnsX = Math.max(2, Math.floor(w / 0.9));
-    const columnsZ = Math.max(2, Math.floor(d / 0.9));
+    const columnsX = Math.max(2, Math.floor(w / columnSpacing));
+    const columnsZ = Math.max(2, Math.floor(d / columnSpacing));
 
     for (let row = 1; row < rows; row++) {
       const wy = row * (h / rows) - h / 2;
@@ -303,7 +316,7 @@ export function Building({ building, ambience }: BuildingProps) {
       }
     }
     return windows;
-  }, [building.footprint, building.windowSeed, d, h, usesFootprint, w]);
+  }, [building.footprint, building.windowSeed, d, detailLevel, h, showMediumDetails, usesFootprint, w]);
   const windowLayers = useMemo(() => {
     const layers = [
       { color: '#fff1c6', slots: [] as WindowSlot[] },
@@ -354,18 +367,36 @@ export function Building({ building, ambience }: BuildingProps) {
         </>
       )}
       {windowLayers.map((layer) => (
-        <WindowLayer key={layer.color} ambience={ambience} color={layer.color} slots={layer.slots} />
+        <WindowLayer key={layer.color} ambience={ambience} color={layer.color} detailFade={detailOpacity} slots={layer.slots} />
       ))}
-      {!usesFootprint &&
+      {showFullDetails &&
+        !usesFootprint &&
         !hasGabledRoof &&
         building.signSides.map((side, index) => (
-          <Sign key={`${building.id}-sign-${side}-${index}`} side={side} buildingSize={building.size} ambience={ambience} index={index} />
+          <Sign
+            key={`${building.id}-sign-${side}-${index}`}
+            side={side}
+            buildingSize={building.size}
+            ambience={ambience}
+            index={index}
+            opacity={detailOpacity}
+          />
         ))}
       {projectingSigns.map((spec, index) => (
-        <ProjectingSign key={`${building.id}-projecting-sign-${index}`} buildingSize={building.size} ambience={ambience} spec={spec} />
+        <ProjectingSign
+          key={`${building.id}-projecting-sign-${index}`}
+          buildingSize={building.size}
+          ambience={ambience}
+          opacity={detailOpacity}
+          spec={spec}
+        />
       ))}
-      {!usesFootprint && !hasGabledRoof ? <RooftopDetail size={building.size} seed={building.windowSeed + 42} hasStairs={building.hasStairs} /> : null}
-      {h >= 9.8 && building.windowSeed % 3 === 0 ? <AviationLight height={h} seed={building.windowSeed} /> : null}
+      {showFullDetails && !usesFootprint && !hasGabledRoof ? (
+        <RooftopDetail size={building.size} seed={building.windowSeed + 42} hasStairs={building.hasStairs} />
+      ) : null}
+      {showMediumDetails && h >= 9.8 && building.windowSeed % 3 === 0 ? (
+        <AviationLight height={h} opacity={detailOpacity} seed={building.windowSeed} />
+      ) : null}
     </group>
   );
 }

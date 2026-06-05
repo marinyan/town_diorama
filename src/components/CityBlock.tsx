@@ -5,7 +5,7 @@ import { CityLayout } from '../cityData';
 import { sampleElevationUnits } from '../map/elevationSampler';
 import { ElevationGrid } from '../map/elevationTypes';
 import { ViewBounds, boxIntersectsViewBounds, segmentIntersectsViewBounds } from '../viewBounds';
-import { Building } from './Building';
+import { Building, BuildingDetailLevel } from './Building';
 
 type CityBlockProps = {
   layout: CityLayout;
@@ -18,6 +18,17 @@ const roadZs = [-24, -15, -5, 5, 15, 24];
 const fieldSize = { width: 72, depth: 62 };
 const terrainResolution = { columns: 45, rows: 39 };
 const terrainBaseY = -0.3;
+
+type VisibleBuilding = {
+  building: CityLayout['buildings'][number];
+  detailLevel: BuildingDetailLevel;
+  detailFade: number;
+};
+
+function smoothstep(edge0: number, edge1: number, value: number) {
+  const t = Math.max(0, Math.min(1, (value - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
 
 function slopedStripGeometry(start: { x: number; y: number; z: number }, end: { x: number; y: number; z: number }, width: number, yOffset = 0) {
   const dx = end.x - start.x;
@@ -209,10 +220,21 @@ export function CityBlock({ layout, ambience, viewBounds }: CityBlockProps) {
   const isOsm = layout.source === 'osm' && layout.roads && layout.roads.length > 0;
   const withinField = (x: number, z: number) => Math.abs(x) <= 36 && Math.abs(z) <= 31;
   const visibleBuildings = useMemo(
-    () =>
-      layout.buildings.filter((building) =>
-        boxIntersectsViewBounds(viewBounds, building.position[0], building.position[2], building.size[0], building.size[2], 4),
-      ),
+    (): VisibleBuilding[] => {
+      const viewRadius = viewBounds ? Math.max(viewBounds.maxX - viewBounds.minX, viewBounds.maxZ - viewBounds.minZ) / 2 : 42;
+      const detailRadius = Math.max(20, viewRadius * 0.78);
+      const fadeWidth = Math.max(4, viewRadius * 0.08);
+
+      return layout.buildings
+        .filter((building) => boxIntersectsViewBounds(viewBounds, building.position[0], building.position[2], building.size[0], building.size[2], 4))
+        .map((building) => {
+          const distanceFromFocus = Math.hypot(building.position[0], building.position[2]);
+          const detailFade = 1 - smoothstep(detailRadius - fadeWidth, detailRadius + fadeWidth, distanceFromFocus);
+          const detailLevel: BuildingDetailLevel = detailFade > 0.015 ? 'full' : 'low';
+          return { building, detailLevel, detailFade };
+        })
+        .filter(({ detailLevel, building }) => detailLevel !== 'low' || building.size[1] > 0);
+    },
     [layout.buildings, viewBounds],
   );
 
@@ -311,8 +333,8 @@ export function CityBlock({ layout, ambience, viewBounds }: CityBlockProps) {
         </group>
       ))}
 
-      {visibleBuildings.map((building) => (
-        <Building key={building.id} building={building} ambience={ambience} />
+      {visibleBuildings.map(({ building, detailLevel, detailFade }) => (
+        <Building key={building.id} building={building} ambience={ambience} detailLevel={detailLevel} detailFade={detailFade} />
       ))}
 
     </group>
