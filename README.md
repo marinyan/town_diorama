@@ -86,6 +86,14 @@ Refresh the local OSM sample with:
 node scripts/fetch-osm.mjs
 ```
 
+For runtime streaming, split that OSM sample into deterministic local chunks:
+
+```bash
+npm run chunk:osm
+```
+
+The app prefers `public/data/kagurazaka-osm-chunks/manifest.json` when present. It loads only the chunks intersecting the current orthographic view window plus a preload margin, then merges the cached chunks before converting them into roads, buildings, water, and crowd paths. This is intended as the base for larger maps and future camera panning.
+
 The converter in `src/map/createLayoutFromOsm.ts` projects latitude/longitude into local diorama coordinates, maps highway ways to road meshes and crowd paths, and maps building footprints to low-poly building blocks. Building height uses OSM `height` or `building:levels` when present, otherwise a deterministic estimated height. Low-rise buildings can receive simple gabled roofs for a quieter Kagurazaka feel.
 
 ## Embedded Elevation Data

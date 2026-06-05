@@ -5,6 +5,7 @@ import { sampleElevationUnits } from './elevationSampler';
 import { ElevationGrid } from './elevationTypes';
 import { OsmNode, OsmPayload, OsmWay } from './osmTypes';
 import { projectLonLat } from './projectGeo';
+import { ChunkBounds } from './osmChunks';
 
 const fieldLimit = {
   x: 35.5,
@@ -18,15 +19,30 @@ type PathCandidate = {
   tieBreak: number;
 };
 
+type LayoutOptions = {
+  clipBounds?: ChunkBounds;
+};
+
 function isWay(element: { type: string }): element is OsmWay {
   return element.type === 'way';
 }
 
-function isInsideField(point: Vector3) {
+function isInsideField(point: Vector3, clipBounds?: ChunkBounds) {
+  if (clipBounds) {
+    return point.x >= clipBounds.minX && point.x <= clipBounds.maxX && point.z >= clipBounds.minZ && point.z <= clipBounds.maxZ;
+  }
   return Math.abs(point.x) <= fieldLimit.x && Math.abs(point.z) <= fieldLimit.z;
 }
 
-function isSegmentNearField(a: Vector3, b: Vector3) {
+function isSegmentNearField(a: Vector3, b: Vector3, clipBounds?: ChunkBounds) {
+  if (clipBounds) {
+    return (
+      Math.min(a.x, b.x) <= clipBounds.maxX &&
+      Math.max(a.x, b.x) >= clipBounds.minX &&
+      Math.min(a.z, b.z) <= clipBounds.maxZ &&
+      Math.max(a.z, b.z) >= clipBounds.minZ
+    );
+  }
   return (
     Math.min(a.x, b.x) <= fieldLimit.x &&
     Math.max(a.x, b.x) >= -fieldLimit.x &&
@@ -195,8 +211,8 @@ function mapAreaUnits(payload: OsmPayload, metersPerUnit: number) {
   return Math.max(0, width * depth);
 }
 
-function createRoadPath(id: string, road: RoadData, random: ReturnType<typeof createRandom>): CrowdPath | undefined {
-  const visiblePoints = road.points.filter(isInsideField);
+function createRoadPath(id: string, road: RoadData, random: ReturnType<typeof createRandom>, clipBounds?: ChunkBounds): CrowdPath | undefined {
+  const visiblePoints = road.points.filter((point) => isInsideField(point, clipBounds));
   const sourcePoints = visiblePoints.length >= 2 ? visiblePoints : road.points;
   if (sourcePoints.length < 2) return undefined;
   const forward = sourcePoints.map((position, index) => ({
@@ -215,7 +231,7 @@ function createRoadPath(id: string, road: RoadData, random: ReturnType<typeof cr
   };
 }
 
-export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, elevationGrid?: ElevationGrid): CityLayout {
+export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, elevationGrid?: ElevationGrid, options: LayoutOptions = {}): CityLayout {
   const random = createRandom(seed);
   const nodes = new Map<number, OsmNode>();
   payload.elements.filter(isNode).forEach((node) => nodes.set(node.id, node));
@@ -232,6 +248,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
   const paths: CrowdPath[] = [];
   const pathCandidates: PathCandidate[] = [];
   const doors: Vector3[] = [];
+  const clipBounds = options.clipBounds;
 
   for (const way of ways) {
     const points2 = way.nodes
@@ -255,7 +272,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
       const x = (minX + maxX) / 2;
       const z = (minZ + maxZ) / 2;
       const groundY = sampleElevationUnits(elevationGrid, x, z);
-      if (Math.abs(x) > fieldLimit.x || Math.abs(z) > fieldLimit.z) continue;
+      if (!isInsideField(new Vector3(x, 0, z), clipBounds)) continue;
       const footprint = simplifyFootprint(points2.map((point) => [point.x - x, point.y - z]));
       if (!footprint) continue;
       buildings.push({
@@ -280,7 +297,10 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
       // like steps/bridge/tunnel/layer are enough to imply toy-scale verticality.
       const elevation = roadElevation(way.tags);
       const roadPoints = points2.map((point) => new Vector3(point.x, 0.035 + elevation + sampleElevationUnits(elevationGrid, point.x, point.y), point.y));
-      if (!roadPoints.some(isInsideField) && !roadPoints.some((point, index) => index > 0 && isSegmentNearField(roadPoints[index - 1], point))) {
+      if (
+        !roadPoints.some((point) => isInsideField(point, clipBounds)) &&
+        !roadPoints.some((point, index) => index > 0 && isSegmentNearField(roadPoints[index - 1], point, clipBounds))
+      ) {
         continue;
       }
       const road: RoadData = {
@@ -293,7 +313,7 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
       };
       roads.push(road);
       const length = pathLength(roadPoints);
-      const path = createRoadPath(`osm-path-${way.id}`, road, random);
+      const path = createRoadPath(`osm-path-${way.id}`, road, random, clipBounds);
       if (path && length >= 0.9) {
         pathCandidates.push({
           path,
@@ -310,7 +330,10 @@ export function createCityLayoutFromOsm(payload: OsmPayload, seed = 31415, eleva
         const terrainY = sampleElevationUnits(elevationGrid, point.x, point.y);
         return new Vector3(point.x, terrainY + 0.012, point.y);
       });
-      if (!waterPoints.some(isInsideField) && !waterPoints.some((point, index) => index > 0 && isSegmentNearField(waterPoints[index - 1], point))) {
+      if (
+        !waterPoints.some((point) => isInsideField(point, clipBounds)) &&
+        !waterPoints.some((point, index) => index > 0 && isSegmentNearField(waterPoints[index - 1], point, clipBounds))
+      ) {
         continue;
       }
       waters.push({

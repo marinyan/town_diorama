@@ -6,6 +6,7 @@ import { Ambience } from '../ambience';
 import { CityLayout, createCityLayout } from '../cityData';
 import { createCityLayoutFromOsm } from '../map/createLayoutFromOsm';
 import { ElevationGrid } from '../map/elevationTypes';
+import { chunksForBounds, expandBounds, mergeOsmChunks, OsmChunkManifest, OsmChunkPayload } from '../map/osmChunks';
 import { OsmPayload } from '../map/osmTypes';
 import { ViewBounds } from '../viewBounds';
 import { CityBlock } from './CityBlock';
@@ -123,8 +124,12 @@ function LightningFlash({ active }: { active: boolean }) {
 export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible, onCompassAngleChange }: DioramaSceneProps) {
   const fallbackLayout = useMemo(() => createCityLayout(1984), []);
   const [layout, setLayout] = useState<CityLayout>(fallbackLayout);
+  const [chunkManifest, setChunkManifest] = useState<OsmChunkManifest>();
+  const [elevationGrid, setElevationGrid] = useState<ElevationGrid>();
+  const [loadedChunks, setLoadedChunks] = useState<Map<string, OsmChunkPayload>>(() => new Map());
   const [viewBounds, setViewBounds] = useState<ViewBounds>();
   const sceneRef = useRef<Group>(null);
+  const requestedChunks = useRef(new Set<string>());
   const fogArgs =
     ambience.state.weather === 'fog'
       ? [ambience.fogColor, 24, 86]
@@ -142,22 +147,86 @@ export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible,
       return response.json() as Promise<T>;
     };
 
-    Promise.all([
-      loadJson<OsmPayload>('data/kagurazaka-osm.json'),
-      loadJson<ElevationGrid>('data/kagurazaka-elevation.json').catch(() => undefined),
-    ])
-      .then(([payload, elevationGrid]) => {
-        if (!active) return;
-        setLayout(createCityLayoutFromOsm(payload, 31415, elevationGrid));
+    loadJson<ElevationGrid>('data/kagurazaka-elevation.json')
+      .then((grid) => {
+        if (active) setElevationGrid(grid);
+      })
+      .catch(() => undefined);
+
+    loadJson<OsmChunkManifest>('data/kagurazaka-osm-chunks/manifest.json')
+      .then((manifest) => {
+        if (active) setChunkManifest(manifest);
       })
       .catch(() => {
-        if (active) setLayout(fallbackLayout);
+        Promise.all([
+          loadJson<OsmPayload>('data/kagurazaka-osm.json'),
+          loadJson<ElevationGrid>('data/kagurazaka-elevation.json').catch(() => undefined),
+        ])
+          .then(([payload, elevationGrid]) => {
+            if (!active) return;
+            setLayout(createCityLayoutFromOsm(payload, 31415, elevationGrid));
+          })
+          .catch(() => {
+            if (active) setLayout(fallbackLayout);
+          });
       });
 
     return () => {
       active = false;
     };
   }, [fallbackLayout]);
+
+  useEffect(() => {
+    if (!chunkManifest) return;
+    const effectiveBounds =
+      viewBounds ??
+      ({
+        minX: -36,
+        maxX: 36,
+        minZ: -31,
+        maxZ: 31,
+      } satisfies ViewBounds);
+    const requiredChunks = chunksForBounds(chunkManifest, effectiveBounds);
+
+    requiredChunks.forEach((chunk) => {
+      if (loadedChunks.has(chunk.id) || requestedChunks.current.has(chunk.id)) return;
+      requestedChunks.current.add(chunk.id);
+      fetch(`data/kagurazaka-osm-chunks/${chunk.path}`)
+        .then((response) => {
+          if (!response.ok) throw new Error(`${chunk.path} unavailable: ${response.status}`);
+          return response.json() as Promise<OsmChunkPayload>;
+        })
+        .then((payload) => {
+          setLoadedChunks((current) => {
+            const next = new Map(current);
+            next.set(chunk.id, payload);
+            return next;
+          });
+        })
+        .catch(() => {
+          requestedChunks.current.delete(chunk.id);
+        });
+    });
+  }, [chunkManifest, loadedChunks, viewBounds]);
+
+  useEffect(() => {
+    if (!chunkManifest || loadedChunks.size === 0) return;
+    const effectiveBounds =
+      viewBounds ??
+      ({
+        minX: -36,
+        maxX: 36,
+        minZ: -31,
+        maxZ: 31,
+      } satisfies ViewBounds);
+    const clipBounds = expandBounds(effectiveBounds, chunkManifest.chunkSizeUnits * 0.85);
+    const payload = mergeOsmChunks(chunkManifest, [...loadedChunks.values()]);
+    try {
+      setLayout(createCityLayoutFromOsm(payload, 31415, elevationGrid, { clipBounds }));
+    } catch {
+      setLayout(fallbackLayout);
+    }
+  }, [chunkManifest, elevationGrid, fallbackLayout, loadedChunks, viewBounds]);
 
   return (
     <>

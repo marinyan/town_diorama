@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "sourceName": "kagurazaka",
+  "source": "OpenStreetMap via Overpass API",
+  "fetchedAt": "2026-06-02T14:38:02.736Z",
+  "bbox": {
+    "south": 35.6978,
+    "west": 139.7312,
+    "north": 35.7062,
+    "east": 139.7468
+  },
+  "center": {
+    "lat": 35.7029,
+    "lon": 139.7366
+  },
+  "metersPerUnit": 22,
+  "chunkSizeUnits": 24,
+  "worldBounds": {
+    "minX": -22.18856322762611,
+    "maxX": 41.91173054099368,
+    "minZ": -16.698000000015014,
+    "maxZ": 25.805999999993787
+  },
+  "chunks": [
+    {
+      "id": "-1_-1",
+      "path": "-1_-1.json",
+      "bounds": {
+        "minX": -24,
+        "maxX": 0,
+        "minZ": -24,
+        "maxZ": 0
+      },
+      "elementCount": 6555,
+      "wayCount": 1157
+    },
+    {
+      "id": "0_-1",
+      "path": "0_-1.json",
+      "bounds": {
+        "minX": 0,
+        "maxX": 24,
+        "minZ": -24,
+        "maxZ": 0
+      },
+      "elementCount": 4661,
+      "wayCount": 723
+    },
+    {
+      "id": "1_-1",
+      "path": "1_-1.json",
+      "bounds": {
+        "minX": 24,
+        "maxX": 48,
+        "minZ": -24,
+        "maxZ": 0
+      },
+      "elementCount": 2136,
+      "wayCount": 319
+    },
+    {
+      "id": "-1_0",
+      "path": "-1_0.json",
+      "bounds": {
+        "minX": -24,
+        "maxX": 0,
+        "minZ": 0,
+        "maxZ": 24
+      },
+      "elementCount": 7431,
+      "wayCount": 1255
+    },
+    {
+      "id": "0_0",
+      "path": "0_0.json",
+      "bounds": {
+        "minX": 0,
+        "maxX": 24,
+        "minZ": 0,
+        "maxZ": 24
+      },
+      "elementCount": 7510,
+      "wayCount": 1180
+    },
+    {
+      "id": "1_0",
+      "path": "1_0.json",
+      "bounds": {
+        "minX": 24,
+        "maxX": 48,
+        "minZ": 0,
+        "maxZ": 24
+      },
+      "elementCount": 4353,
+      "wayCount": 782
+    },
+    {
+      "id": "-1_1",
+      "path": "-1_1.json",
+      "bounds": {
+        "minX": -24,
+        "maxX": 0,
+        "minZ": 24,
+        "maxZ": 48
+      },
+      "elementCount": 978,
+      "wayCount": 112
+    },
+    {
+      "id": "0_1",
+      "path": "0_1.json",
+      "bounds": {
+        "minX": 0,
+        "maxX": 24,
+        "minZ": 24,
+        "maxZ": 48
+      },
+      "elementCount": 979,
+      "wayCount": 66
+    },
+    {
+      "id": "1_1",
+      "path": "1_1.json",
+      "bounds": {
+        "minX": 24,
+        "maxX": 48,
+        "minZ": 24,
+        "maxZ": 48
+      },
+      "elementCount": 943,
+      "wayCount": 67
+    }
+  ]
+}
