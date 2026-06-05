@@ -7,6 +7,7 @@ import { CityLayout, createCityLayout } from '../cityData';
 import { createCityLayoutFromOsm } from '../map/createLayoutFromOsm';
 import { ElevationGrid } from '../map/elevationTypes';
 import { OsmPayload } from '../map/osmTypes';
+import { ViewBounds } from '../viewBounds';
 import { CityBlock } from './CityBlock';
 import { IconCrowd } from './IconCrowd';
 import { WeatherSystem } from './WeatherSystem';
@@ -19,22 +20,45 @@ type DioramaSceneProps = {
   onCompassAngleChange?: (angle: number) => void;
 };
 
-function CameraRig({ onCompassAngleChange, paused }: { onCompassAngleChange?: (angle: number) => void; paused: boolean }) {
-  const { camera, size } = useThree();
+function CameraRig({
+  onCompassAngleChange,
+  onViewBoundsChange,
+  paused,
+}: {
+  onCompassAngleChange?: (angle: number) => void;
+  onViewBoundsChange?: (bounds: ViewBounds) => void;
+  paused: boolean;
+}) {
+  const { camera, gl, size } = useThree();
   const angle = useRef(0.76);
   const lastReportedAngle = useRef(-1);
+  const lastReportedRadius = useRef(0);
+  const wheelZoom = useRef(1);
+  const targetWheelZoom = useRef(1);
   const target = useMemo(() => new Vector3(0, 1.8, 0), []);
-  const zoom = useMemo(() => {
+  const baseZoom = useMemo(() => {
     const shortEdge = Math.max(1, Math.min(size.width, size.height));
     return Math.min(42, Math.max(22, 25 * (shortEdge / 980)));
   }, [size.height, size.width]);
 
   useEffect(() => {
     if (camera instanceof ThreeOrthographicCamera) {
-      camera.zoom = zoom;
+      camera.zoom = baseZoom * wheelZoom.current;
       camera.updateProjectionMatrix();
     }
-  }, [camera, zoom]);
+  }, [baseZoom, camera]);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const nextZoom = targetWheelZoom.current * Math.exp(-event.deltaY * 0.0011);
+      targetWheelZoom.current = Math.min(1.9, Math.max(0.58, nextZoom));
+    };
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [gl]);
 
   useFrame((_, delta) => {
     if (!paused) angle.current += delta * 0.035;
@@ -42,10 +66,29 @@ function CameraRig({ onCompassAngleChange, paused }: { onCompassAngleChange?: (a
       lastReportedAngle.current = angle.current;
       onCompassAngleChange(angle.current);
     }
+    wheelZoom.current += (targetWheelZoom.current - wheelZoom.current) * Math.min(1, delta * 7.5);
+    if (camera instanceof ThreeOrthographicCamera) {
+      camera.zoom = baseZoom * wheelZoom.current;
+    }
     const radius = 52;
     camera.position.set(Math.cos(angle.current) * radius, 44, Math.sin(angle.current) * radius);
     camera.lookAt(target);
     camera.updateProjectionMatrix();
+
+    if (onViewBoundsChange && camera instanceof ThreeOrthographicCamera) {
+      const viewWidth = size.width / Math.max(1, camera.zoom);
+      const viewHeight = size.height / Math.max(1, camera.zoom);
+      const viewRadius = Math.hypot(viewWidth, viewHeight) * 0.58 + 8;
+      if (Math.abs(viewRadius - lastReportedRadius.current) > 0.6) {
+        lastReportedRadius.current = viewRadius;
+        onViewBoundsChange({
+          minX: target.x - viewRadius,
+          maxX: target.x + viewRadius,
+          minZ: target.z - viewRadius,
+          maxZ: target.z + viewRadius,
+        });
+      }
+    }
   });
 
   return null;
@@ -80,6 +123,7 @@ function LightningFlash({ active }: { active: boolean }) {
 export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible, onCompassAngleChange }: DioramaSceneProps) {
   const fallbackLayout = useMemo(() => createCityLayout(1984), []);
   const [layout, setLayout] = useState<CityLayout>(fallbackLayout);
+  const [viewBounds, setViewBounds] = useState<ViewBounds>();
   const sceneRef = useRef<Group>(null);
   const fogArgs =
     ambience.state.weather === 'fog'
@@ -121,7 +165,7 @@ export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible,
       <fog attach="fog" args={fogArgs as [string, number, number]} />
       <group ref={sceneRef}>
         <OrthographicCamera makeDefault zoom={25} near={0.1} far={220} position={[40, 38, 40]} />
-        <CameraRig paused={orbitPaused} onCompassAngleChange={onCompassAngleChange} />
+        <CameraRig paused={orbitPaused} onCompassAngleChange={onCompassAngleChange} onViewBoundsChange={setViewBounds} />
         <hemisphereLight args={[ambience.skyColor, '#263038', 1.05]} />
         <directionalLight
           castShadow
@@ -136,9 +180,15 @@ export function DioramaScene({ ambience, orbitPaused, crowdVisible, rainVisible,
         {ambience.timePreset !== 'morning' && ambience.timePreset !== 'noon' ? (
           <Stars radius={70} depth={18} count={650} factor={2.1} saturation={0.2} fade speed={0.08} />
         ) : null}
-        <CityBlock layout={layout} ambience={ambience} />
+        <CityBlock layout={layout} ambience={ambience} viewBounds={viewBounds} />
         {crowdVisible ? (
-          <IconCrowd paths={layout.paths} buildings={layout.buildings} ambience={ambience} metersPerUnit={layout.metersPerUnit} />
+          <IconCrowd
+            paths={layout.paths}
+            buildings={layout.buildings}
+            ambience={ambience}
+            metersPerUnit={layout.metersPerUnit}
+            viewBounds={viewBounds}
+          />
         ) : null}
         <WeatherSystem ambience={ambience} visible={rainVisible} />
       </group>

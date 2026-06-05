@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Ambience } from '../ambience';
 import { BuildingData, CrowdPath } from '../cityData';
 import { createRandom } from '../random';
+import { ViewBounds } from '../viewBounds';
 import { RetroMapIcon } from './RetroMapIcon';
 
 type IconCrowdProps = {
@@ -9,6 +10,7 @@ type IconCrowdProps = {
   buildings: BuildingData[];
   ambience: Ambience;
   metersPerUnit?: number;
+  viewBounds?: ViewBounds;
 };
 
 export type IconAgent = {
@@ -41,7 +43,7 @@ function iconScaleForMap(metersPerUnit = 8) {
   return Math.min(1.12, Math.max(0.56, Math.sqrt(8 / metersPerUnit)));
 }
 
-export function IconCrowd({ paths, buildings, ambience, metersPerUnit }: IconCrowdProps) {
+export function IconCrowd({ paths, buildings, ambience, metersPerUnit, viewBounds }: IconCrowdProps) {
   const occluders = useMemo(
     () =>
       buildings.map((building) => ({
@@ -116,7 +118,7 @@ export function IconCrowd({ paths, buildings, ambience, metersPerUnit }: IconCro
   return (
     <group>
       {agents.map((agent) => (
-        <RetroMapIcon key={agent.id} agent={agent} occluders={occluders} />
+        <RetroMapIcon key={agent.id} agent={agent} occluders={occluders} viewBounds={viewBounds} />
       ))}
     </group>
   );

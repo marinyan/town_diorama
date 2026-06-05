@@ -4,11 +4,13 @@ import { Ambience } from '../ambience';
 import { CityLayout } from '../cityData';
 import { sampleElevationUnits } from '../map/elevationSampler';
 import { ElevationGrid } from '../map/elevationTypes';
+import { ViewBounds, boxIntersectsViewBounds, segmentIntersectsViewBounds } from '../viewBounds';
 import { Building } from './Building';
 
 type CityBlockProps = {
   layout: CityLayout;
   ambience: Ambience;
+  viewBounds?: ViewBounds;
 };
 
 const roadXs = [-27, -18, -9, 0, 9, 18, 27];
@@ -169,7 +171,7 @@ function TerrainSurface({ grid, snowCover }: { grid?: ElevationGrid; snowCover: 
   );
 }
 
-export function CityBlock({ layout, ambience }: CityBlockProps) {
+export function CityBlock({ layout, ambience, viewBounds }: CityBlockProps) {
   const asphalt = useMemo(
     () =>
       new MeshStandardMaterial({
@@ -206,6 +208,13 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
   const riverWall = useMemo(() => new MeshStandardMaterial({ color: '#525a58', roughness: 0.7 }), []);
   const isOsm = layout.source === 'osm' && layout.roads && layout.roads.length > 0;
   const withinField = (x: number, z: number) => Math.abs(x) <= 36 && Math.abs(z) <= 31;
+  const visibleBuildings = useMemo(
+    () =>
+      layout.buildings.filter((building) =>
+        boxIntersectsViewBounds(viewBounds, building.position[0], building.position[2], building.size[0], building.size[2], 4),
+      ),
+    [layout.buildings, viewBounds],
+  );
 
   return (
     <group>
@@ -219,6 +228,7 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
           const length = Math.hypot(dx, dz);
           if (length < 0.05) return null;
           if (!withinField(start.x, start.z) && !withinField(end.x, end.z)) return null;
+          if (!segmentIntersectsViewBounds(viewBounds, start, end, river.width + 2)) return null;
           const angle = Math.atan2(dx, dz);
           const y = (start.y + end.y) / 2;
           const width = river.width;
@@ -248,6 +258,7 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
               const length = Math.hypot(dx, dz);
               if (length < 0.05) return null;
               if (!withinField(start.x, start.z) && !withinField(end.x, end.z)) return null;
+              if (!segmentIntersectsViewBounds(viewBounds, start, end, road.width + 2)) return null;
               const angle = Math.atan2(dx, dz);
               const y = (start.y + end.y) / 2;
               const treadCount = road.hasSteps ? Math.min(12, Math.max(3, Math.floor(length / 0.5))) : 0;
@@ -269,7 +280,7 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
               );
             }),
           )
-        : roadZs.map((z) => (
+        : roadZs.filter((z) => boxIntersectsViewBounds(viewBounds, 0, z, 71, 2.6, 2)).map((z) => (
         <group key={`road-z-${z}`}>
           <mesh receiveShadow position={[0, 0.01, z]} material={asphalt}>
             <boxGeometry args={[71, 0.08, 2.6]} />
@@ -286,7 +297,7 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
         </group>
           ))}
 
-      {!isOsm && roadXs.map((x) => (
+      {!isOsm && roadXs.filter((x) => boxIntersectsViewBounds(viewBounds, x, 0, 2.35, 60, 2)).map((x) => (
         <group key={`road-x-${x}`}>
           <mesh receiveShadow position={[x, 0.02, 0]} material={asphalt}>
             <boxGeometry args={[2.35, 0.08, 60]} />
@@ -300,7 +311,7 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
         </group>
       ))}
 
-      {layout.buildings.map((building) => (
+      {visibleBuildings.map((building) => (
         <Building key={building.id} building={building} ambience={ambience} />
       ))}
 

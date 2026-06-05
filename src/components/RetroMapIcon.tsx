@@ -1,11 +1,13 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useRef } from 'react';
 import { Group, MeshBasicMaterial, Shape, ShapeGeometry, Vector3 } from 'three';
+import { ViewBounds, pointWithinViewBounds } from '../viewBounds';
 import { IconAgent, IconOccluder } from './IconCrowd';
 
 type RetroMapIconProps = {
   agent: IconAgent;
   occluders: IconOccluder[];
+  viewBounds?: ViewBounds;
 };
 
 const bodyShape = new Shape();
@@ -127,7 +129,7 @@ function isOccludedByBuilding(from: Vector3, to: Vector3, occluders: IconOcclude
   return occluders.some((building) => segmentHitsBuilding(from, to, building));
 }
 
-export function RetroMapIcon({ agent, occluders }: RetroMapIconProps) {
+export function RetroMapIcon({ agent, occluders, viewBounds }: RetroMapIconProps) {
   const groupRef = useRef<Group>(null);
   const headMaterialRef = useRef<MeshBasicMaterial>(null);
   const bodyMaterialRef = useRef<MeshBasicMaterial>(null);
@@ -148,6 +150,7 @@ export function RetroMapIcon({ agent, occluders }: RetroMapIconProps) {
     occlusionTarget.current.y += isUmbrella ? 0.22 : 0.14;
     const targetVisible =
       !sample.hidden &&
+      pointWithinViewBounds(viewBounds, position.current.x, position.current.z, 4) &&
       !isInsideBuilding(position.current, occluders) &&
       !isOccludedByBuilding(camera.position, occlusionTarget.current, occluders);
     const umbrellaVisible =
