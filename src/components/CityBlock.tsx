@@ -17,6 +17,59 @@ const fieldSize = { width: 72, depth: 62 };
 const terrainResolution = { columns: 45, rows: 39 };
 const terrainBaseY = -0.3;
 
+function slopedStripGeometry(start: { x: number; y: number; z: number }, end: { x: number; y: number; z: number }, width: number, yOffset = 0) {
+  const dx = end.x - start.x;
+  const dz = end.z - start.z;
+  const length = Math.hypot(dx, dz);
+  if (length < 0.0001) return null;
+  const nx = dz / length;
+  const nz = -dx / length;
+  const half = width / 2;
+  const geometry = new BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new Float32BufferAttribute(
+      [
+        start.x - nx * half,
+        start.y + yOffset,
+        start.z - nz * half,
+        start.x + nx * half,
+        start.y + yOffset,
+        start.z + nz * half,
+        end.x - nx * half,
+        end.y + yOffset,
+        end.z - nz * half,
+        end.x + nx * half,
+        end.y + yOffset,
+        end.z + nz * half,
+      ],
+      3,
+    ),
+  );
+  geometry.setIndex([0, 2, 1, 1, 2, 3]);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function SlopedStrip({
+  end,
+  material,
+  width,
+  yOffset,
+  start,
+}: {
+  end: { x: number; y: number; z: number };
+  material: MeshStandardMaterial;
+  width: number;
+  yOffset?: number;
+  start: { x: number; y: number; z: number };
+}) {
+  const geometry = useMemo(() => slopedStripGeometry(start, end, width, yOffset), [end, start, width, yOffset]);
+  useEffect(() => () => geometry?.dispose(), [geometry]);
+  if (!geometry) return null;
+  return <mesh receiveShadow geometry={geometry} material={material} />;
+}
+
 function TerrainSurface({ grid, snowCover }: { grid?: ElevationGrid; snowCover: number }) {
   const terrainGeometry = useMemo(() => {
     if (!grid) return null;
@@ -171,16 +224,16 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
           const width = river.width;
           const bankHeight = 0.16;
           return (
-            <group key={`${river.id}-${index}`} position={[(start.x + end.x) / 2, y, (start.z + end.z) / 2]} rotation={[0, angle, 0]}>
-              <mesh receiveShadow material={water}>
-                <boxGeometry args={[width, 0.035, length + width * 0.28]} />
-              </mesh>
-              <mesh position={[-width / 2 - 0.08, bankHeight / 2, 0]} receiveShadow material={riverWall}>
-                <boxGeometry args={[0.16, bankHeight, length + width * 0.18]} />
-              </mesh>
-              <mesh position={[width / 2 + 0.08, bankHeight / 2, 0]} receiveShadow material={riverWall}>
-                <boxGeometry args={[0.16, bankHeight, length + width * 0.18]} />
-              </mesh>
+            <group key={`${river.id}-${index}`}>
+              <SlopedStrip start={start} end={end} width={width} yOffset={0.015} material={water} />
+              <group position={[(start.x + end.x) / 2, y, (start.z + end.z) / 2]} rotation={[0, angle, 0]}>
+                <mesh position={[-width / 2 - 0.08, bankHeight / 2, 0]} receiveShadow material={riverWall}>
+                  <boxGeometry args={[0.16, bankHeight, length + width * 0.18]} />
+                </mesh>
+                <mesh position={[width / 2 + 0.08, bankHeight / 2, 0]} receiveShadow material={riverWall}>
+                  <boxGeometry args={[0.16, bankHeight, length + width * 0.18]} />
+                </mesh>
+              </group>
             </group>
           );
         }),
@@ -198,26 +251,20 @@ export function CityBlock({ layout, ambience }: CityBlockProps) {
               const angle = Math.atan2(dx, dz);
               const y = (start.y + end.y) / 2;
               const treadCount = road.hasSteps ? Math.min(12, Math.max(3, Math.floor(length / 0.5))) : 0;
-              const supportHeight = Math.max(0, y - 0.08);
               return (
-                <group key={`${road.id}-${index}`} position={[(start.x + end.x) / 2, y, (start.z + end.z) / 2]} rotation={[0, angle, 0]}>
-                  {supportHeight > 0.16 ? (
-                    <mesh position={[0, -supportHeight / 2 - 0.05, 0]} receiveShadow material={curb}>
-                      <boxGeometry args={[road.width * 0.72, supportHeight, length + road.width * 0.18]} />
-                    </mesh>
-                  ) : null}
-                  <mesh receiveShadow material={asphalt}>
-                    <boxGeometry args={[road.width, 0.08, length + road.width * 0.4]} />
-                  </mesh>
-                  {Array.from({ length: treadCount }, (_, treadIndex) => (
-                    <mesh
-                      key={`${road.id}-${index}-step-${treadIndex}`}
-                      position={[0, 0.07, -length / 2 + ((treadIndex + 0.5) / treadCount) * length]}
-                      material={lane}
-                    >
-                      <boxGeometry args={[road.width * 0.86, 0.035, 0.035]} />
-                    </mesh>
-                  ))}
+                <group key={`${road.id}-${index}`}>
+                  <SlopedStrip start={start} end={end} width={road.width} yOffset={0.04} material={asphalt} />
+                  <group position={[(start.x + end.x) / 2, y, (start.z + end.z) / 2]} rotation={[0, angle, 0]}>
+                    {Array.from({ length: treadCount }, (_, treadIndex) => (
+                      <mesh
+                        key={`${road.id}-${index}-step-${treadIndex}`}
+                        position={[0, 0.07, -length / 2 + ((treadIndex + 0.5) / treadCount) * length]}
+                        material={lane}
+                      >
+                        <boxGeometry args={[road.width * 0.86, 0.035, 0.035]} />
+                      </mesh>
+                    ))}
+                  </group>
                 </group>
               );
             }),
