@@ -4,14 +4,29 @@
   "version": "0.1.0",
   "type": "module",
   "main": "electron/main.cjs",
+  "engines": {
+    "node": "^22.23.4 || ^24.22.1 || ^26.12.1"
+  },
   "scripts": {
+    "check:node": "node scripts/check-node-version.mjs",
+    "check:electron": "node scripts/check-electron-version.mjs",
+    "predev": "node scripts/check-node-version.mjs",
     "dev": "vite --host 127.0.0.1",
+    "prebuild": "node scripts/check-node-version.mjs",
     "build": "tsc && vite build",
+    "prepreview": "node scripts/check-node-version.mjs",
     "preview": "vite preview --host 127.0.0.1",
+    "prefetch:osm": "node scripts/check-node-version.mjs",
+    "fetch:osm": "node scripts/fetch-osm.mjs",
+    "prefetch:elevation": "node scripts/check-node-version.mjs",
     "fetch:elevation": "node scripts/fetch-gsi-elevation.mjs",
+    "predesktop": "node scripts/check-node-version.mjs && node scripts/check-electron-version.mjs",
     "desktop": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron . --dev\"",
+    "predesktop:built": "node scripts/check-node-version.mjs && node scripts/check-electron-version.mjs",
     "desktop:built": "npm run build && electron .",
+    "prepackage:win": "node scripts/check-node-version.mjs && node scripts/check-electron-version.mjs",
     "package:win": "npm run build && electron-builder --win portable",
+    "prepackage:scr": "node scripts/check-node-version.mjs && node scripts/check-electron-version.mjs",
     "package:scr": "npm run build && electron-builder --win portable --config.win.signAndEditExecutable=false && node scripts/make-scr.mjs"
   },
   "build": {
@@ -46,7 +61,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^10.0.1",
-    "electron": "^42.3.0",
+    "electron": "^45.0.0",
     "electron-builder": "^26.8.1",
     "typescript": "^5.6.3",
     "vite": "^6.0.5",

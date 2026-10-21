@@ -4,6 +4,10 @@ A browser-based Vite + React + TypeScript diorama of a dense Shinjuku-like backs
 
 ## Run
 
+Use patched Node.js `24.22.1` (recommended), `22.23.4`, or `26.12.1`. The `.nvmrc` pins the recommended LTS release, and Node-powered commands reject known vulnerable releases.
+
+Desktop launch and packaging also inspect Electron's embedded Node.js runtime. As of October 22, 2026, Electron `45.0.0` still embeds vulnerable Node.js `24.22.0`, so those commands are intentionally blocked until an Electron release carrying a patched Node.js runtime is available. Browser development and builds remain available.
+
 ```bash
 npm install
 npm run dev
@@ -83,7 +87,7 @@ The scene first tries to load `public/data/shinjuku-osm.json`, which contains Op
 Refresh the local OSM sample with:
 
 ```bash
-node scripts/fetch-osm.mjs
+npm run fetch:osm
 ```
 
 The converter in `src/map/createLayoutFromOsm.ts` projects latitude/longitude into local diorama coordinates, maps highway ways to road meshes and crowd paths, and maps building footprints to low-poly building blocks. Building height uses OSM `height` or `building:levels` when present, otherwise a deterministic estimated height.

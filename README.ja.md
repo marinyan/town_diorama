@@ -7,6 +7,10 @@ Vite + React + TypeScript + React Three Fiber で作られており、OpenStreet
 
 ## セットアップ
 
+修正版の Node.js `24.22.1`（推奨）、`22.23.4`、または `26.12.1` を使用してください。`.nvmrc` は推奨LTS版を固定しており、既知の脆弱なNode.jsでは Node を使う処理が停止します。
+
+デスクトップ版の起動・パッケージ作成時には、Electron 内蔵の Node.js も検査します。2026年10月22日現在、Electron `45.0.0` は脆弱な Node.js `24.22.0` を内蔵しているため、修正版Node.jsを含むElectronが公開されるまでこれらの処理は意図的に停止します。ブラウザ版の開発・ビルドは利用できます。
+
 ```powershell
 npm.cmd install
 ```
@@ -99,7 +103,7 @@ Live Weather では Open-Meteo API を使っています。
 OSMサンプルを再取得する場合:
 
 ```powershell
-node scripts/fetch-osm.mjs
+npm.cmd run fetch:osm
 ```
 
 `src/map/createLayoutFromOsm.ts` は緯度経度をローカルなジオラマ座標へ投影し、道路をメッシュと群衆パスに、建物 footprint を低ポリ建物に変換します。建物高さは OSM の `height` または `building:levels` があれば使い、なければ決定的な推定値を使います。
